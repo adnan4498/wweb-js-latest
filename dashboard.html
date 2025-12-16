@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bulk Sender Dashboard</title>
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ff4444;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background-color: #00ff00;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Main Container */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 2rem 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-item {
+            margin: 0.5rem 0;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-link:hover,
+        .menu-link.active {
+            background-color: #f0f8ff;
+            border-left-color: #25D366;
+            color: #25D366;
+        }
+
+        .menu-icon {
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .menu-title {
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background-color: white;
+        }
+
+        .content-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .content-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Dashboard Cards */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-content {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            border: 2px dashed #dee2e6;
+        }
+
+        .qr-placeholder {
+            width: 280px;
+            height: 280px;
+            background: #ffffff;
+            margin: 0 auto 1rem;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+            padding: 10px;
+        }
+
+        .qr-placeholder img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .qr-placeholder canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #333;
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .footer-links {
+            margin-top: 0.5rem;
+        }
+
+        .footer-link {
+            color: #25D366;
+            text-decoration: none;
+            margin: 0 1rem;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: #25D366;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #128C7E;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>📱 WhatsApp Bulk Sender Dashboard</h1>
+        <div class="header-status">
+            <span id="status-text">Disconnected</span>
+            <div class="status-indicator" id="status-indicator"></div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav>
+                <ul class="sidebar-menu">
+                    <li class="menu-item">
+                        <a href="#" class="menu-link active" onclick="showSection('dashboard')">
+                            <span class="menu-icon">📊</span>
+                            <span class="menu-title">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('message-templates')">
+                            <span class="menu-icon">📋</span>
+                            <span class="menu-title">Message Templates</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('send-message')">
+                            <span class="menu-icon">📤</span>
+                            <span class="menu-title">Send Message</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('contacts')">
+                            <span class="menu-icon">👥</span>
+                            <span class="menu-title">Contacts</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('settings')">
+                            <span class="menu-icon">⚙️</span>
+                            <span class="menu-title">Settings</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('logs')">
+                            <span class="menu-icon">📄</span>
+                            <span class="menu-title">Logs</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#" class="menu-link" onclick="showSection('replies')">
+                            <span class="menu-icon">📨</span>
+                            <span class="menu-title">Replies</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section">
+                <div class="content-header">
+                    <h2 class="content-title">Dashboard Overview</h2>
+                    <p class="content-subtitle">Monitor your WhatsApp Bulk Sender application</p>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">📱</div>
+                            <div class="card-title">Connection Status</div>
+                        </div>
+                        <div class="card-content">
+                            <p id="connection-status">Not Connected</p>
+                            <button class="btn btn-primary" onclick="connectWhatsApp()">Connect</button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">📤</div>
+                            <div class="card-title">Messages Sent</div>
+                        </div>
+                        <div class="card-content">
+                            <p><strong id="messages-sent">0</strong> messages sent today</p>
+                            <p>Last sent: <span id="last-message-time">Never</span></p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">👥</div>
+                            <div class="card-title">Contact List</div>
+                        </div>
+                        <div class="card-content">
+                            <p><strong id="contacts-count">0</strong> contacts loaded</p>
+                            <p>Active contacts: <span id="active-contacts">0</span></p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">⚡</div>
+                            <div class="card-title">Server Status</div>
+                        </div>
+                        <div class="card-content">
+                            <p>Server running on port <strong>3000</strong></p>
+                            <p>Uptime: <span id="server-uptime">--</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Code Section -->
+                <div class="qr-section" id="qr-section" style="display: none;">
+                    <h3>📱 QR Code for WhatsApp Connection</h3>
+                    <div class="qr-placeholder" id="qr-placeholder">
+                        ⏳
+                    </div>
+                    <p>Scan this QR code with your WhatsApp mobile app</p>
+                    <p><strong id="qr-timer">Waiting for QR code...</strong></p>
+                    <button class="btn btn-secondary" onclick="refreshQR()" style="margin-top: 1rem;">🔄 Refresh QR Code</button>
+                </div>
+            </section>
+
+            <!-- Send Message Section -->
+            <section id="send-message-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">Send Message</h2>
+                    <p class="content-subtitle">Upload contacts and send bulk messages</p>
+                </div>
+
+                <!-- File Upload Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📄</div>
+                        <div class="card-title">Upload Contact List</div>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label for="excel-file" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Upload Excel File (.xlsx, .xls):</label>
+                                <input type="file" id="excel-file" accept=".xlsx,.xls" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                                <small style="color: #666;">Excel file should have a column with phone numbers (headers like "phone", "number", "mobile")</small>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem;">
+                                <button class="btn btn-primary" onclick="uploadContacts()">📤 Upload Contacts</button>
+                                <button class="btn btn-secondary" onclick="clearContacts()">🗑️ Clear Contacts</button>
+                            </div>
+                            
+                            <div id="upload-status" style="margin-top: 1rem;">
+                                <p><strong>Contacts Loaded:</strong> <span id="contacts-loaded">0</span></p>
+                                <div id="contact-list-display" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 1rem; margin-top: 0.5rem; border-radius: 5px; display: none;">
+                                    <!-- Contact list will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Configuration Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📝</div>
+                        <div class="card-title">Message Configuration</div>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <!-- Template Selection -->
+                            <div>
+                                <label for="template-selector" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                                    <span style="margin-right: 0.5rem;">📋</span>Use Saved Template:
+                                </label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <select id="template-selector" style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                                        <option value="">-- Select a template --</option>
+                                    </select>
+                                    <button class="btn btn-secondary" onclick="loadSelectedTemplate()" style="padding: 0.75rem;">📥 Load</button>
+                                </div>
+                                <small style="color: #666;">Choose a template to auto-fill the message field, or write your own message below.</small>
+                            </div>
+                            
+                            <div>
+                                <label for="message-text" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Message Text:</label>
+                                <textarea id="message-text" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;" placeholder="Enter your message here or load from template above..."></textarea>
+                                <small style="color: #666;">
+                                    💡 <strong>Tip:</strong> Use <a href="#" onclick="showSection('message-templates')" style="color: #25D366;">Message Templates</a> with spintax for natural variations!
+                                </small>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem;">
+                                <button class="btn btn-primary" onclick="sendMessages()">📤 Send Bulk Messages</button>
+                                <button class="btn btn-secondary" onclick="stopSending()">⏹️ Stop Sending</button>
+                                <button class="btn btn-secondary" onclick="previewMessages()">👁️ Preview</button>
+                            </div>
+                            
+                            <!-- Progress Section -->
+                            <div id="progress-section" style="display: none; margin-top: 1rem;">
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                                    <h4>📊 Sending Progress</h4>
+                                    <p>Progress: <span id="progress-current">0</span> / <span id="progress-total">0</span></p>
+                                    <p>Remaining: <span id="progress-remaining">0</span></p>
+                                    <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 0.5rem;">
+                                        <div id="progress-bar" style="background: #25D366; height: 100%; border-radius: 10px; width: 0%; transition: width 0.3s ease;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Logs Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📄</div>
+                        <div class="card-title">Real-time Logs</div>
+                        <button class="btn btn-secondary" onclick="clearLogs()" style="padding: 0.5rem; font-size: 0.8rem;">🗑️ Clear</button>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <div id="logs-container" style="background: #1e1e1e; color: #00ff00; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.9rem; max-height: 400px; overflow-y: auto; border: 2px solid #333;">
+                                <div style="color: #888;">📝 Logs will appear here in real-time...</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <small style="color: #666;">💡 Live logs showing all message sending activity</small>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div id="log-status" style="width: 8px; height: 8px; border-radius: 50%; background-color: #28a745; animation: pulse 2s infinite;"></div>
+                                    <small style="color: #28a745;">Live</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div class="status-message status-info" id="send-status">
+                    Ready to send messages. Please upload contacts and connect to WhatsApp first.
+                </div>
+            </section>
+
+            <!-- Message Templates Section -->
+            <section id="message-templates-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">Message Templates</h2>
+                    <p class="content-subtitle">Create message templates with spintax for natural variation</p>
+                </div>
+
+                <!-- Info Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">💡</div>
+                        <div class="card-title">Spintax Technology</div>
+                    </div>
+                    <div class="card-content">
+                        <p><strong>Same message → generated in hundreds of variations.</strong></p>
+                        <p>Example spintax:</p>
+                        <code style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; display: block; margin: 0.5rem 0;">
+                            {Hi|Hello|Hey} {there|boss}, I {saw|found} your business on Google.
+                        </code>
+                        <p><strong>System automatically generates a unique line every send.</strong></p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 1.5rem;">👤</div>
+                                <p><strong>Looks Human</strong></p>
+                                <small>Natural variation prevents detection</small>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 1.5rem;">🛡️</div>
+                                <p><strong>Avoids Detection</strong></p>
+                                <small>AI-resistant message patterns</small>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 1.5rem;">📈</div>
+                                <p><strong>Higher Reply Rates</strong></p>
+                                <small>Personalized feel increases engagement</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Creation Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">➕</div>
+                        <div class="card-title">Create New Template</div>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label for="template-name" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Template Name:</label>
+                                <input type="text" id="template-name" placeholder="e.g., Business Outreach Template" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                            
+                            <div>
+                                <label for="template-text" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Message Template (with spintax):</label>
+                                <textarea id="template-text" rows="6" 
+                                          placeholder="Enter your message using spintax syntax like: {Hi|Hello} {there|boss}, I {saw|found} your {business|company|service} on Google."
+                                          style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;"></textarea>
+                                <small style="color: #666;">
+                                    <strong>Spintax Syntax:</strong> Use {option1|option2|option3} for variations. 
+                                    <button type="button" onclick="showSpintaxExamples()" style="background: none; border: none; color: #25D366; text-decoration: underline; cursor: pointer;">
+                                        View Examples
+                                    </button>
+                                </small>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem;">
+                                <button class="btn btn-primary" onclick="saveTemplate()">💾 Save Template</button>
+                                <button class="btn btn-secondary" onclick="previewSpintax()">👁️ Preview Variations</button>
+                                <button class="btn btn-secondary" onclick="clearTemplateForm()">🗑️ Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Templates List Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Saved Templates</div>
+                        <button class="btn btn-secondary" onclick="restoreDefaults()" style="padding: 0.5rem; font-size: 0.8rem;">🔄 Restore Defaults</button>
+                    </div>
+                    <div class="card-content">
+                        <div id="templates-list">
+                            <!-- Templates will be loaded here -->
+                            <p style="text-align: center; color: #666; padding: 2rem;">No templates saved yet. Create your first template above!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spintax Examples Modal -->
+                <div id="spintax-examples-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 2rem; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <h3>Spintax Examples</h3>
+                        <div style="margin: 1rem 0;">
+                            <h4>Basic Variations:</h4>
+                            <code>{Hi|Hello|Hey} there!</code><br>
+                            <small>→ Generates: "Hi there!" or "Hello there!" or "Hey there!"</small>
+                        </div>
+                        <div style="margin: 1rem 0;">
+                            <h4>Business Template Example:</h4>
+                            <code>{Hi|Hello|Hey} {there|boss|friend},<br>I {saw|found|discovered} your {business|company|service} on Google.<br>{Are you|Do you} still {offering|providing} {services|solutions}?</code>
+                        </div>
+                        <div style="margin: 1rem 0;">
+                            <h4>Complex Variations:</h4>
+                            <code>We {help|assist|support} businesses {grow|expand|develop} {online|on the internet}.</code>
+                        </div>
+                        <button class="btn btn-primary" onclick="hideSpintaxExamples()">Close</button>
+                    </div>
+                </div>
+
+                <!-- Real-time Logs Card -->
+                <div class="dashboard-card" style="max-width: 800px; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📄</div>
+                        <div class="card-title">Real-time Logs</div>
+                        <button class="btn btn-secondary" onclick="clearLogs()" style="padding: 0.5rem; font-size: 0.8rem;">🗑️ Clear</button>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <div id="logs-container" style="background: #1e1e1e; color: #00ff00; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.9rem; max-height: 400px; overflow-y: auto; border: 2px solid #333;">
+                                <div style="color: #888;">📝 Logs will appear here in real-time...</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <small style="color: #666;">💡 Live logs showing all message sending activity</small>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div id="log-status" style="width: 8px; height: 8px; border-radius: 50%; background-color: #28a745; animation: pulse 2s infinite;"></div>
+                                    <small style="color: #28a745;">Live</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div class="status-message status-info" id="template-status">
+                    Create message templates with spintax to generate natural variations for better engagement.
+                </div>
+            </section>
+
+            <!-- Other Sections (Placeholders) -->
+            <section id="contacts-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">Contacts</h2>
+                    <p class="content-subtitle">Manage your contact list</p>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-content">
+                        <p>Contact management features coming soon...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">Settings</h2>
+                    <p class="content-subtitle">Configure your application</p>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-content">
+                        <p>Settings panel coming soon...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="logs-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">Logs</h2>
+                    <p class="content-subtitle">View application logs</p>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-content">
+                        <p>Log viewer coming soon...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Replies Section -->
+            <section id="replies-section" class="content-section" style="display: none;">
+                <div class="content-header">
+                    <h2 class="content-title">📨 Reply Tracking</h2>
+                    <p class="content-subtitle">Monitor replies to your bulk messages in real-time</p>
+                </div>
+
+                <!-- Reply Statistics Cards -->
+                <div class="dashboard-grid" style="margin-bottom: 2rem;">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">📊</div>
+                            <div class="card-title">Reply Statistics</div>
+                        </div>
+                        <div class="card-content">
+                            <div style="display: grid; gap: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                                    <span><strong>Total Messages Sent:</strong></span>
+                                    <span id="total-sent-count" style="color: #25D366; font-weight: bold;">0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                                    <span><strong>Total Replies Received:</strong></span>
+                                    <span id="total-replies-count" style="color: #007bff; font-weight: bold;">0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                                    <span><strong>Reply Rate:</strong></span>
+                                    <span id="reply-rate" style="color: #28a745; font-weight: bold;">0%</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                                    <span><strong>Last Reply:</strong></span>
+                                    <span id="last-reply-time" style="color: #6c757d;">Never</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">🔔</div>
+                            <div class="card-title">Live Status</div>
+                        </div>
+                        <div class="card-content">
+                            <div style="text-align: center; padding: 1rem;">
+                                <div id="reply-status-indicator" style="width: 60px; height: 60px; border-radius: 50%; background-color: #6c757d; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                    📨
+                                </div>
+                                <div id="reply-status-text" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">No Activity</div>
+                                <div id="reply-status-subtext" style="color: #666; font-size: 0.9rem;">Waiting for replies...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon">⚡</div>
+                            <div class="card-title">Quick Actions</div>
+                        </div>
+                        <div class="card-content">
+                            <div style="display: grid; gap: 0.5rem;">
+                                <button class="btn btn-primary" onclick="refreshReplyData()" style="font-size: 0.9rem; padding: 0.5rem;">🔄 Refresh Data</button>
+                                <button class="btn btn-secondary" onclick="clearReplyData()" style="font-size: 0.9rem; padding: 0.5rem; background: #dc3545;">🗑️ Clear All Data</button>
+                                <button class="btn btn-secondary" onclick="exportReplyData()" style="font-size: 0.9rem; padding: 0.5rem; background: #17a2b8;">📥 Export Data</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reply List Section -->
+                <div class="dashboard-card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Recent Replies</div>
+                        <button class="btn btn-secondary" onclick="loadMoreReplies()" id="load-more-btn" style="padding: 0.5rem; font-size: 0.8rem; display: none;">📥 Load More</button>
+                    </div>
+                    <div class="card-content">
+                        <div id="replies-list-container" style="max-height: 500px; overflow-y: auto;">
+                            <div id="replies-list">
+                                <!-- Replies will be loaded here -->
+                                <div style="text-align: center; color: #666; padding: 2rem;">
+                                    📨 No replies received yet. Replies will appear here when people respond to your messages.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Activity Feed -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">🔴</div>
+                        <div class="card-title">Live Activity Feed</div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <div id="activity-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #28a745; animation: pulse 2s infinite;"></div>
+                            <small style="color: #28a745;">Live</small>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="activity-feed" style="background: #1e1e1e; color: #00ff00; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.9rem; max-height: 300px; overflow-y: auto; border: 2px solid #333;">
+                            <div style="color: #888;">🔴 Live reply activity will appear here...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <!-- <footer class="footer">
+        <div>© 2024 WhatsApp Bulk Sender Dashboard. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#" class="footer-link">Documentation</a>
+            <a href="#" class="footer-link">Support</a>
+            <a href="#" class="footer-link">GitHub</a>
+        </div>
+    </footer> -->
+
+    <script>
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Remove active class from all menu items
+            const menuLinks = document.querySelectorAll('.menu-link');
+            menuLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName + '-section').style.display = 'block';
+            
+            // Add active class to clicked menu item
+            event.target.closest('.menu-link').classList.add('active');
+        }
+
+        // WhatsApp Connection
+        async function connectWhatsApp() {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            const connectionStatus = document.getElementById('connection-status');
+            const qrSection = document.getElementById('qr-section');
+            
+            try {
+                // Check current status
+                statusText.textContent = 'Connecting...';
+                statusIndicator.classList.remove('connected');
+                
+                // Fetch current status from server
+                const statusResponse = await fetch('/status');
+                const statusData = await statusResponse.json();
+                
+                if (statusData.connected) {
+                    statusText.textContent = 'Connected';
+                    statusIndicator.classList.add('connected');
+                    connectionStatus.textContent = 'Connected to WhatsApp';
+                    showStatusMessage('Already connected to WhatsApp!', 'success');
+                    return;
+                }
+                
+                if (statusData.qrAvailable) {
+                    // Show existing QR code
+                    await displayQRCode();
+                } else {
+                    // Trigger new connection
+                    statusText.textContent = 'Initializing...';
+                    connectionStatus.textContent = 'Initializing WhatsApp connection...';
+                    
+                    // Wait a moment and check for QR code
+                    setTimeout(async () => {
+                        await displayQRCode();
+                    }, 2000);
+                }
+                
+                // Start monitoring connection status
+                monitorConnection();
+            } catch (error) {
+                console.error('Connection error:', error);
+                statusText.textContent = 'Error';
+                showStatusMessage('Failed to connect to WhatsApp: ' + error.message, 'error');
+            }
+        }
+
+        // Display QR Code
+        async function displayQRCode() {
+            try {
+                const qrResponse = await fetch('/qr');
+                const qrData = await qrResponse.json();
+                
+                if (qrData.qr) {
+                    const qrSection = document.getElementById('qr-section');
+                    const qrPlaceholder = document.getElementById('qr-placeholder');
+                    const statusText = document.getElementById('status-text');
+                    const connectionStatus = document.getElementById('connection-status');
+                    
+                    // Clear previous QR code
+                    qrPlaceholder.innerHTML = '';
+                    
+                    // Generate QR code using QRCode.js
+                    new QRCode(qrPlaceholder, {
+                        text: qrData.qr,
+                        width: 256,
+                        height: 256,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    
+                    statusText.textContent = 'Waiting for scan...';
+                    connectionStatus.textContent = 'QR Code Generated - Scan with WhatsApp';
+                    qrSection.style.display = 'block';
+                    
+                    // Update timer
+                    document.getElementById('qr-timer').textContent = 'Scan this QR code now (expires in ~60 seconds)';
+                    
+                    showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
+                } else {
+                    throw new Error('QR code not available');
+                }
+            } catch (error) {
+                console.error('QR display error:', error);
+                const qrPlaceholder = document.getElementById('qr-placeholder');
+                qrPlaceholder.innerHTML = '❌<br><small>QR code not ready yet. Please wait...</small>';
+                
+                // Retry after 3 seconds
+                setTimeout(displayQRCode, 3000);
+            }
+        }
+
+        // Refresh QR Code
+        async function refreshQR() {
+            try {
+                showStatusMessage('Refreshing QR code...', 'info');
+                
+                // Clear auth to generate new QR
+                const response = await fetch('/clear-auth', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatusMessage('Generating new QR code...', 'info');
+                    
+                    // Wait for new QR code
+                    setTimeout(async () => {
+                        await displayQRCode();
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Refresh QR error:', error);
+                showStatusMessage('Failed to refresh QR code: ' + error.message, 'error');
+            }
+        }
+
+        // Monitor connection status
+        async function monitorConnection() {
+            const checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/status');
+                    const data = await response.json();
+                    
+                    const statusIndicator = document.getElementById('status-indicator');
+                    const statusText = document.getElementById('status-text');
+                    const connectionStatus = document.getElementById('connection-status');
+                    const qrSection = document.getElementById('qr-section');
+                    
+                    if (data.connected) {
+                        statusText.textContent = 'Connected';
+                        statusIndicator.classList.add('connected');
+                        connectionStatus.textContent = 'Connected to WhatsApp';
+                        qrSection.style.display = 'none';
+                        clearInterval(checkInterval);
+                        showStatusMessage('Successfully connected to WhatsApp!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Status check error:', error);
+                }
+            }, 2000);
+        }
+
+        // Upload Contacts
+        async function uploadContacts() {
+            const fileInput = document.getElementById('excel-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatusMessage('Please select an Excel file to upload.', 'error');
+                return;
+            }
+            
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showStatusMessage('Please select a valid Excel file (.xlsx or .xls).', 'error');
+                return;
+            }
+            
+            try {
+                showStatusMessage('Uploading and processing Excel file...', 'info');
+                
+                const formData = new FormData();
+                formData.append('excelFile', file);
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('contacts-loaded').textContent = result.phoneNumbers.length;
+                    showStatusMessage(result.message, 'success');
+                    
+                    // Display contacts
+                    displayContacts(result.phoneNumbers);
+                    
+                    // Update dashboard stats
+                    updateDashboardStats(result.phoneNumbers.length);
+                } else {
+                    showStatusMessage('Upload failed: ' + (result.error || 'Unknown error'), 'error');
+                }
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showStatusMessage('Error uploading file: ' + error.message, 'error');
+            }
+        }
+
+        // Display Contacts
+        function displayContacts(phoneNumbers) {
+            const contactDisplay = document.getElementById('contact-list-display');
+            const displayNumbers = phoneNumbers.slice(0, 50); // Show first 50 contacts
+            
+            contactDisplay.innerHTML = `
+                <p><strong>First ${displayNumbers.length} phone numbers:</strong></p>
+                <div style="font-family: monospace; font-size: 0.9rem; line-height: 1.4;">
+                    ${displayNumbers.map((phone, index) => `${index + 1}. ${phone}`).join('<br>')}
+                </div>
+                ${phoneNumbers.length > 50 ? `<p><em>...and ${phoneNumbers.length - 50} more</em></p>` : ''}
+            `;
+            contactDisplay.style.display = 'block';
+        }
+
+        // Clear Contacts
+        function clearContacts() {
+            document.getElementById('excel-file').value = '';
+            document.getElementById('contacts-loaded').textContent = '0';
+            document.getElementById('contact-list-display').style.display = 'none';
+            showStatusMessage('Contact list cleared.', 'info');
+            updateDashboardStats(0);
+        }
+
+        // Stop Sending
+        async function stopSending() {
+            try {
+                const response = await fetch('/stop', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatusMessage(result.message, 'info');
+                    document.getElementById('progress-section').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Stop sending error:', error);
+                showStatusMessage('Error stopping send process: ' + error.message, 'error');
+            }
+        }
+
+        // Monitor Progress
+        async function monitorProgress() {
+            const progressSection = document.getElementById('progress-section');
+            progressSection.style.display = 'block';
+            
+            const checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/progress');
+                    const data = await response.json();
+                    
+                    // Update progress display
+                    document.getElementById('progress-current').textContent = data.current;
+                    document.getElementById('progress-total').textContent = data.total;
+                    document.getElementById('progress-remaining').textContent = data.remaining;
+                    
+                    // Update progress bar
+                    const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
+                    document.getElementById('progress-bar').style.width = percentage + '%';
+                    
+                    // Update messages sent counter
+                    document.getElementById('messages-sent').textContent = data.current;
+                    
+                    if (!data.sending) {
+                        clearInterval(checkInterval);
+                        showStatusMessage(`Bulk sending completed! ${data.current} messages processed.`, 'success');
+                        
+                        setTimeout(() => {
+                            progressSection.style.display = 'none';
+                        }, 5000);
+                    }
+                } catch (error) {
+                    console.error('Progress monitoring error:', error);
+                }
+            }, 1000);
+        }
+
+        // Update Dashboard Stats
+        function updateDashboardStats(contactsCount) {
+            document.getElementById('contacts-count').textContent = contactsCount;
+            document.getElementById('active-contacts').textContent = contactsCount;
+        }
+
+        // Send Messages
+        async function sendMessages() {
+            const messageText = document.getElementById('message-text').value;
+            
+            if (!messageText.trim()) {
+                showStatusMessage('Please enter a message text.', 'error');
+                return;
+            }
+            
+            // Check connection status first
+            try {
+                const statusResponse = await fetch('/status');
+                const statusData = await statusResponse.json();
+                
+                if (!statusData.connected) {
+                    showStatusMessage('Please connect to WhatsApp first!', 'error');
+                    return;
+                }
+                
+                if (statusData.progress.total === 0) {
+                    showStatusMessage('Please upload an Excel file with phone numbers first!', 'error');
+                    return;
+                }
+                
+                const hasSpintax = /\{[^}]+\}/.test(messageText);
+                const variationCount = countSpintaxVariations(messageText);
+                
+                if (hasSpintax) {
+                    showStatusMessage(`Starting bulk message sending to ${statusData.progress.total} contacts with spintax (${variationCount} variations)...`, 'info');
+                } else {
+                    showStatusMessage(`Starting bulk message sending to ${statusData.progress.total} contacts...`, 'info');
+                }
+                
+                // Send bulk message request to server
+                const response = await fetch('/send-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: messageText,
+                        useSpintax: hasSpintax
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('last-message-time').textContent = new Date().toLocaleTimeString();
+                    showStatusMessage(result.message, 'success');
+                    
+                    // Start monitoring progress
+                    monitorProgress();
+                } else {
+                    showStatusMessage('Failed to start bulk sending: ' + (result.error || 'Unknown error'), 'error');
+                }
+                
+            } catch (error) {
+                console.error('Send message error:', error);
+                showStatusMessage('Error sending messages: ' + error.message, 'error');
+            }
+        }
+
+        // Preview Messages
+        async function previewMessages() {
+            const messageText = document.getElementById('message-text').value;
+            const contactsLoaded = parseInt(document.getElementById('contacts-loaded').textContent);
+            
+            if (!messageText.trim()) {
+                showStatusMessage('Please enter a message for preview.', 'error');
+                return;
+            }
+            
+            if (contactsLoaded === 0) {
+                showStatusMessage('Please upload contacts first for preview.', 'error');
+                return;
+            }
+            
+            try {
+                const statusResponse = await fetch('/status');
+                const statusData = await statusResponse.json();
+                
+                const preview = `"${messageText}" will be sent to ${statusData.progress.total} contacts`;
+                showStatusMessage(preview, 'info');
+            } catch (error) {
+                const preview = `"${messageText}" will be sent to ${contactsLoaded} contacts`;
+                showStatusMessage(preview, 'info');
+            }
+        }
+
+        // Status Messages
+        function showStatusMessage(message, type) {
+            const statusElement = document.getElementById('send-status');
+            statusElement.textContent = message;
+            statusElement.className = `status-message status-${type}`;
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Template Management Functions
+        let templates = [];
+
+        function saveTemplate() {
+            const name = document.getElementById('template-name').value.trim();
+            const text = document.getElementById('template-text').value.trim();
+            
+            if (!name) {
+                showTemplateStatus('Please enter a template name.', 'error');
+                return;
+            }
+            
+            if (!text) {
+                showTemplateStatus('Please enter a template message.', 'error');
+                return;
+            }
+            
+            // Validate spintax syntax
+            const openBraces = (text.match(/\{/g) || []).length;
+            const closeBraces = (text.match(/\}/g) || []).length;
+            
+            if (openBraces !== closeBraces) {
+                showTemplateStatus('Invalid spintax syntax: Unmatched braces {}. Please check your template.', 'error');
+                return;
+            }
+            
+            const template = {
+                id: Date.now(),
+                name: name,
+                text: text,
+                createdAt: new Date().toISOString(),
+                isDefault: false  // User-created templates are not defaults
+            };
+            
+            templates.push(template);
+            saveTemplatesToStorage();
+            displayTemplates();
+            showTemplateStatus(`Template "${name}" saved successfully!`, 'success');
+            clearTemplateForm();
+        }
+
+        function duplicateTemplate(id) {
+            const originalTemplate = templates.find(t => t.id === id);
+            if (!originalTemplate) return;
+            
+            const duplicate = {
+                id: Date.now(),
+                name: `${originalTemplate.name} (Copy)`,
+                text: originalTemplate.text,
+                createdAt: new Date().toISOString(),
+                isDefault: false
+            };
+            
+            templates.push(duplicate);
+            saveTemplatesToStorage();
+            displayTemplates();
+            showTemplateStatus(`Template duplicated successfully!`, 'success');
+        }
+
+        function restoreDefaults() {
+            if (confirm('This will restore the default templates and remove all custom templates. Are you sure?')) {
+                createDefaultTemplates();
+                displayTemplates();
+                updateTemplateSelector();
+                showTemplateStatus('Default templates restored!', 'success');
+            }
+        }
+
+        function displayTemplates() {
+            const templatesList = document.getElementById('templates-list');
+            
+            if (templates.length === 0) {
+                templatesList.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">No templates saved yet. Create your first template above!</p>';
+                return;
+            }
+            
+            // Separate default and user templates
+            const defaultTemplates = templates.filter(t => t.isDefault);
+            const userTemplates = templates.filter(t => !t.isDefault);
+            
+            let html = '';
+            
+            // Show default templates section
+            if (defaultTemplates.length > 0) {
+                html += `
+                    <div style="margin-bottom: 2rem;">
+                        <h4 style="color: #25D366; margin-bottom: 1rem;">🎯 Default Templates (Ready to Use)</h4>
+                `;
+                
+                defaultTemplates.forEach(template => {
+                    const variationCount = countSpintaxVariations(template.text);
+                    html += `
+                        <div style="border: 2px solid #25D366; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #f0fff4;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0; color: #155724;">${template.name}</h4>
+                                <div>
+                                    <button class="btn btn-primary" onclick="loadTemplate(${template.id})" style="padding: 0.5rem; margin-right: 0.5rem;">📝 Load</button>
+                                    <button class="btn btn-secondary" onclick="duplicateTemplate(${template.id})" style="padding: 0.5rem; background: #17a2b8; color: white;">📋 Duplicate</button>
+                                </div>
+                            </div>
+                            <p style="background: #fff; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-family: monospace; font-size: 0.9rem; color: #495057;">
+                                ${escapeHtml(template.text.substring(0, 100))}${template.text.length > 100 ? '...' : ''}
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <small style="color: #155724;">
+                                    <strong>Ready-to-use template</strong> | 
+                                    Potential variations: <strong>${variationCount}</strong>
+                                </small>
+                                <button class="btn btn-secondary" onclick="previewTemplateSpintax(${template.id})" style="padding: 0.5rem;">👁️ Preview</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            // Show user templates section
+            if (userTemplates.length > 0) {
+                html += `
+                    <div>
+                        <h4 style="color: #333; margin-bottom: 1rem;">✏️ Your Custom Templates</h4>
+                `;
+                
+                userTemplates.forEach(template => {
+                    const variationCount = countSpintaxVariations(template.text);
+                    html += `
+                        <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0; color: #333;">${template.name}</h4>
+                                <div>
+                                    <button class="btn btn-secondary" onclick="loadTemplate(${template.id})" style="padding: 0.5rem; margin-right: 0.5rem;">📝 Edit</button>
+                                    <button class="btn btn-secondary" onclick="deleteTemplate(${template.id})" style="padding: 0.5rem; background: #dc3545; color: white;">🗑️ Delete</button>
+                                </div>
+                            </div>
+                            <p style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-family: monospace; font-size: 0.9rem; color: #666;">
+                                ${escapeHtml(template.text.substring(0, 100))}${template.text.length > 100 ? '...' : ''}
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <small style="color: #666;">
+                                    Created: ${new Date(template.createdAt).toLocaleDateString()} | 
+                                    Potential variations: <strong>${variationCount}</strong>
+                                </small>
+                                <button class="btn btn-primary" onclick="previewTemplateSpintax(${template.id})" style="padding: 0.5rem;">👁️ Preview</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            } else {
+                html += '<p style="text-align: center; color: #666; padding: 2rem;">No custom templates yet. Create your first template above!</p>';
+            }
+            
+            templatesList.innerHTML = html;
+        }
+
+        function loadTemplate(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+            
+            document.getElementById('template-name').value = template.name;
+            document.getElementById('template-text').value = template.text;
+            showTemplateStatus(`Loaded template "${template.name}" for editing.`, 'info');
+        }
+
+        function deleteTemplate(id) {
+            if (!confirm('Are you sure you want to delete this template?')) return;
+            
+            templates = templates.filter(t => t.id !== id);
+            saveTemplatesToStorage();
+            displayTemplates();
+            showTemplateStatus('Template deleted successfully.', 'success');
+        }
+
+        function clearTemplateForm() {
+            document.getElementById('template-name').value = '';
+            document.getElementById('template-text').value = '';
+        }
+
+        function showSpintaxExamples() {
+            document.getElementById('spintax-examples-modal').style.display = 'flex';
+        }
+
+        function hideSpintaxExamples() {
+            document.getElementById('spintax-examples-modal').style.display = 'none';
+        }
+
+        function previewSpintax() {
+            const text = document.getElementById('template-text').value.trim();
+            
+            if (!text) {
+                showTemplateStatus('Please enter a template message to preview.', 'error');
+                return;
+            }
+            
+            const variations = generateSpintaxVariations(text, 5);
+            
+            let previewHtml = '<strong>Sample Variations:</strong><br><br>';
+            variations.forEach((variation, index) => {
+                previewHtml += `${index + 1}. ${escapeHtml(variation)}<br><br>`;
+            });
+            
+            showTemplateStatus(previewHtml, 'info');
+        }
+
+        function previewTemplateSpintax(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+            
+            const variations = generateSpintaxVariations(template.text, 3);
+            
+            let previewHtml = `<strong>Template: "${template.name}"</strong><br><br><strong>Sample Variations:</strong><br><br>`;
+            variations.forEach((variation, index) => {
+                previewHtml += `${index + 1}. ${escapeHtml(variation)}<br><br>`;
+            });
+            
+            showTemplateStatus(previewHtml, 'info');
+        }
+
+        function generateSpintaxVariations(text, count = 3) {
+            const variations = [];
+            
+            for (let i = 0; i < count; i++) {
+                let result = text;
+                
+                // Process spintax patterns
+                const spintaxPattern = /\{([^}]+)\}/g;
+                let match;
+                
+                while ((match = spintaxPattern.exec(text)) !== null) {
+                    const options = match[1].split('|');
+                    const randomOption = options[Math.floor(Math.random() * options.length)];
+                    result = result.replace(match[0], randomOption);
+                }
+                
+                variations.push(result);
+            }
+            
+            return variations;
+        }
+
+        function countSpintaxVariations(text) {
+            let totalVariations = 1;
+            const spintaxPattern = /\{([^}]+)\}/g;
+            let match;
+            
+            while ((match = spintaxPattern.exec(text)) !== null) {
+                const options = match[1].split('|').length;
+                totalVariations *= options;
+            }
+            
+            return totalVariations;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showTemplateStatus(message, type) {
+            const statusElement = document.getElementById('template-status');
+            statusElement.innerHTML = message;
+            statusElement.className = `status-message status-${type}`;
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 8000);
+        }
+
+        function saveTemplatesToStorage() {
+            localStorage.setItem('whatsapp-templates', JSON.stringify(templates));
+        }
+
+        function loadTemplatesFromStorage() {
+            const saved = localStorage.getItem('whatsapp-templates');
+            if (saved) {
+                templates = JSON.parse(saved);
+            } else {
+                // Create default templates if none exist
+                createDefaultTemplates();
+            }
+            updateTemplateSelector();
+        }
+
+        function createDefaultTemplates() {
+            const defaultTemplates = [
+                {
+                    id: Date.now() + 1,
+                    name: "🎯 Business Outreach Template",
+                    text: "{Hi|Hello|Hey} {there|business owner|friend},<br><br>I {discovered|stumbled upon|found} your {business|company|service} while {searching online|researching businesses|browsing Google} and I {really|absolutely|still} {like|love|am impressed by} what you do.<br><br>We {help|assist|support} businesses {like yours|similar to yours|in your industry} to {increase|boost|grow} their {online|internet|digital} {presence|visibility|reach}.<br><br>{Would you|Could you} be {interested|open} to {learning more|seeing how|exploring ways} we could {help|grow|support} your {business|company} {grow|expand|thrive}?",
+                    createdAt: new Date().toISOString(),
+                    isDefault: true
+                },
+                {
+                    id: Date.now() + 2,
+                    name: "🚀 Lead Generation Template", 
+                    text: "{Hello there|Hi there|Greetings},<br><br>{I hope|I'm hoping|Just} this {message|note|find} {finds you|reaches you|gets to you} well.<br><br>I've been {following|keeping an eye on|watching} your {work|business|company} and I'm {truly|genuinely|really} {impressed|amazed|struck} by {what you've built|your success|the work you do}.<br><br>{At our company|Here at our firm|Within our business}, we {specialize in|work on|focus on} {helping|businesses like yours|similar businesses} to {achieve|reach|meet} their {goals|targets|objectives} through {innovative|creative|effective} {solutions|strategies|approaches}.<br><br>Would you be {open to|interested in|willing to} {chat|call|connect} for a {quick|brief|short} {minute|moment|chat} {about|to discuss|regarding} {how we might|potential ways we could|if we could} {help|support|collaborate}?",
+                    createdAt: new Date().toISOString(),
+                    isDefault: true
+                },
+                {
+                    id: Date.now() + 3,
+                    name: "💼 Customer Engagement Template",
+                    text: "{Hey|Hi|Hello} {there|friend|customer},<br><br>{Just|In} {touching base|reaching out|checking in} to {see how|check how|find out if} things are {going|going on|going well} with your {project|business|service}.<br><br>{We've been|I've been} {thinking about|remembering|recalling} our {previous|past|last} {conversation|interaction|discussion} about {your goals|what you're looking for|your needs} and I {just thought|thought I'd|wanted to} {reach out|connect|follow up} with some {updates|news|information} that might {interest you|be relevant|be helpful}.<br><br>{Our latest|The new|Recent} {development|offering|solution} could {really|absolutely|hugely} {impact|affect|benefit} your {business|company|organization}. {Are you|Would you be} {interested|curious|open} to {learn more|see what it's about|find out}?",
+                    createdAt: new Date().toISOString(),
+                    isDefault: true
+                }
+            ];
+            
+            templates = defaultTemplates;
+            saveTemplatesToStorage();
+        }
+
+        function updateTemplateSelector() {
+            const selector = document.getElementById('template-selector');
+            selector.innerHTML = '<option value="">-- Select a template --</option>';
+            
+            templates.forEach(template => {
+                const variationCount = countSpintaxVariations(template.text);
+                const option = document.createElement('option');
+                option.value = template.id;
+                option.textContent = `${template.name} (${variationCount} variations)`;
+                selector.appendChild(option);
+            });
+        }
+
+        function loadSelectedTemplate() {
+            const selector = document.getElementById('template-selector');
+            const templateId = parseInt(selector.value);
+            
+            if (!templateId) {
+                showStatusMessage('Please select a template first.', 'error');
+                return;
+            }
+            
+            const template = templates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            document.getElementById('message-text').value = template.text;
+            showStatusMessage(`Loaded template "${template.name}" with ${countSpintaxVariations(template.text)} potential variations!`, 'success');
+        }
+
+        // Real-time Logs Management
+        let logsPollInterval = null;
+        let logsLoaded = false;
+
+        function startLogsPolling() {
+            if (logsPollInterval) {
+                clearInterval(logsPollInterval);
+            }
+            
+            logsPollInterval = setInterval(async () => {
+                try {
+                    await fetchAndDisplayLogs();
+                } catch (error) {
+                    console.log('Error fetching logs:', error);
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+
+        function stopLogsPolling() {
+            if (logsPollInterval) {
+                clearInterval(logsPollInterval);
+                logsPollInterval = null;
+            }
+        }
+
+        async function fetchAndDisplayLogs() {
+            try {
+                const response = await fetch('/logs');
+                const data = await response.json();
+                
+                if (data.logs && Array.isArray(data.logs)) {
+                    displayLogs(data.logs);
+                    logsLoaded = true;
+                }
+            } catch (error) {
+                console.log('Error fetching logs:', error);
+            }
+        }
+
+        function displayLogs(logs) {
+            const logsContainer = document.getElementById('logs-container');
+            if (!logsContainer) return;
+
+            if (logs.length === 0) {
+                if (!logsLoaded) {
+                    logsContainer.innerHTML = '<div style="color: #888;">📝 Real-time logs will appear here...</div>';
+                }
+                return;
+            }
+
+            // Remove placeholder on first load
+            if (!logsLoaded) {
+                logsContainer.innerHTML = '';
+            }
+
+            // Format and append new logs
+            let logsHtml = logs.map(log => {
+                const timestamp = log.timestamp || '';
+                const message = escapeHtml(log.message || '');
+                const type = log.type || 'info';
+                
+                let color = '#00ff00'; // Default green
+                let prefix = '📝';
+                
+                // Color code based on log content
+                if (message.includes('❌') || message.includes('Error') || message.includes('Failed')) {
+                    color = '#ff4444';
+                    prefix = '❌';
+                } else if (message.includes('⚠️') || message.includes('Warning')) {
+                    color = '#ffaa00';
+                    prefix = '⚠️';
+                } else if (message.includes('✅') || message.includes('Success')) {
+                    color = '#00ff88';
+                    prefix = '✅';
+                } else if (message.includes('🔄') || message.includes('Connecting') || message.includes('Starting')) {
+                    color = '#00aaff';
+                    prefix = '🔄';
+                } else if (message.includes('📱') || message.includes('WhatsApp')) {
+                    color = '#25D366';
+                    prefix = '📱';
+                } else if (message.includes('📤') || message.includes('Sending')) {
+                    color = '#ff6b35';
+                    prefix = '📤';
+                } else if (message.includes('🎲') || message.includes('Spintax')) {
+                    color = '#9c27b0';
+                    prefix = '🎲';
+                } else if (message.includes('⌨️') || message.includes('typing')) {
+                    color = '#ff9800';
+                    prefix = '⌨️';
+                }
+                
+                return `<div style="color: ${color}; margin-bottom: 4px; line-height: 1.3;">
+                    <span style="color: #666; font-size: 0.8em;">${timestamp}</span> 
+                    <span style="margin-right: 8px;">${prefix}</span>${message}
+                </div>`;
+            }).join('');
+
+            logsContainer.innerHTML = logsHtml;
+            
+            // Auto-scroll to bottom
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            // Clear logs in server
+            fetch('/clear-logs', { method: 'POST' })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Clear local display
+                        const logsContainer = document.getElementById('logs-container');
+                        if (logsContainer) {
+                            logsContainer.innerHTML = '<div style="color: #888;">📝 Logs cleared. New logs will appear here...</div>';
+                        }
+                        logsLoaded = false;
+                        showStatusMessage('Logs cleared successfully!', 'success');
+                    }
+                })
+                .catch(error => {
+                    console.log('Error clearing logs:', error);
+                    showStatusMessage('Error clearing logs', 'error');
+                });
+        }
+
+        function generateRandomSpintax(text) {
+            let result = text;
+            
+            // Process spintax patterns - replace with random option
+            const spintaxPattern = /\{([^}]+)\}/g;
+            let match;
+            
+            while ((match = spintaxPattern.exec(text)) !== null) {
+                const options = match[1].split('|');
+                const randomOption = options[Math.floor(Math.random() * options.length)];
+                result = result.replace(match[0], randomOption);
+            }
+        // Reply Tracking Functions
+        let replyPollInterval = null;
+        let lastReplyCount = 0;
+        let repliesLoaded = false;
+        let currentRepliesLimit = 10;
+
+        // Start real-time reply monitoring
+        function startReplyMonitoring() {
+            if (replyPollInterval) {
+                clearInterval(replyPollInterval);
+            }
+            
+            replyPollInterval = setInterval(async () => {
+                try {
+                    await updateReplyStats();
+                    await fetchAndDisplayReplies();
+                } catch (error) {
+                    console.log('Error updating reply data:', error);
+                }
+            }, 3000); // Poll every 3 seconds for replies
+        }
+
+        // Stop reply monitoring
+        function stopReplyMonitoring() {
+            if (replyPollInterval) {
+                clearInterval(replyPollInterval);
+                replyPollInterval = null;
+            }
+        }
+
+        // Update Reply Statistics
+        async function updateReplyStats() {
+            try {
+                const response = await fetch('/reply-stats');
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const stats = data.data.stats;
+                    
+                    // Update statistics display
+                    document.getElementById('total-sent-count').textContent = stats.totalSent || 0;
+                    document.getElementById('total-replies-count').textContent = stats.totalReplies || 0;
+                    document.getElementById('reply-rate').textContent = (stats.replyRate || 0) + '%';
+                    
+                    // Format last reply time
+                    if (stats.lastReplyTime) {
+                        const lastReply = new Date(stats.lastReplyTime);
+                        document.getElementById('last-reply-time').textContent = lastReply.toLocaleString();
+                    } else {
+                        document.getElementById('last-reply-time').textContent = 'Never';
+                    }
+                    
+                    // Update live status indicator
+                    updateReplyStatusIndicator(stats);
+                    
+                    // Check for new replies
+                    if (stats.totalReplies > lastReplyCount && lastReplyCount > 0) {
+                        showNewReplyNotification(stats.totalReplies - lastReplyCount);
+                        addToActivityFeed(`🆕 ${stats.totalReplies - lastReplyCount} new reply(s) received!`);
+                    }
+                    
+                    lastReplyCount = stats.totalReplies;
+                }
+            } catch (error) {
+                console.error('Error fetching reply stats:', error);
+            }
+        }
+
+        // Update Reply Status Indicator
+        function updateReplyStatusIndicator(stats) {
+            const indicator = document.getElementById('reply-status-indicator');
+            const statusText = document.getElementById('reply-status-text');
+            const statusSubtext = document.getElementById('reply-status-subtext');
+            
+            if (stats.totalReplies === 0) {
+                indicator.style.backgroundColor = '#6c757d';
+                indicator.innerHTML = '📨';
+                statusText.textContent = 'No Activity';
+                statusSubtext.textContent = 'Waiting for replies...';
+            } else if (stats.replyRate < 5) {
+                indicator.style.backgroundColor = '#ffc107';
+                indicator.innerHTML = '⚠️';
+                statusText.textContent = 'Low Activity';
+                statusSubtext.textContent = 'Reply rate below 5%';
+            } else if (stats.replyRate < 15) {
+                indicator.style.backgroundColor = '#17a2b8';
+                indicator.innerHTML = '📊';
+                statusText.textContent = 'Moderate Activity';
+                statusSubtext.textContent = 'Reply rate between 5-15%';
+            } else {
+                indicator.style.backgroundColor = '#28a745';
+                indicator.innerHTML = '🎉';
+                statusText.textContent = 'High Activity';
+                statusSubtext.textContent = 'Reply rate above 15%';
+            }
+        }
+
+        // Fetch and Display Replies
+        async function fetchAndDisplayReplies() {
+            try {
+                const response = await fetch(`/replies?limit=${currentRepliesLimit}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    displayReplies(data.data);
+                    repliesLoaded = true;
+                    
+                    // Show/hide load more button
+                    const loadMoreBtn = document.getElementById('load-more-btn');
+                    if (data.data.length >= currentRepliesLimit) {
+                        loadMoreBtn.style.display = 'inline-block';
+                    } else {
+                        loadMoreBtn.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching replies:', error);
+            }
+        }
+
+        // Display Replies List
+        function displayReplies(replies) {
+            const repliesContainer = document.getElementById('replies-list');
+            
+            if (!repliesContainer) return;
+
+            if (replies.length === 0) {
+                if (!repliesLoaded) {
+                    repliesContainer.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 2rem;">
+                            📨 No replies received yet. Replies will appear here when people respond to your messages.
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // Remove placeholder on first load
+            if (!repliesLoaded) {
+                repliesContainer.innerHTML = '';
+            }
+
+            // Format replies display
+            let repliesHtml = replies.map(reply => {
+                const replyTime = new Date(reply.replyTime);
+                const responseTime = reply.responseTime || 'N/A';
+                const content = reply.content || '[No content]';
+                const phone = reply.phone || 'Unknown';
+                const template = reply.templateUsed || 'Custom';
+                
+                return `
+                    <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #f8f9fa;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                    📱
+                                </div>
+                                <div>
+                                    <div style="font-weight: bold; color: #333;">${phone}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Template: ${template}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; font-size: 0.8rem; color: #666;">
+                                <div>${replyTime.toLocaleDateString()}</div>
+                                <div>${replyTime.toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                        <div style="background: white; padding: 0.75rem; border-radius: 5px; margin-bottom: 0.5rem; border-left: 4px solid #25D366;">
+                            <strong>Reply:</strong> ${escapeHtml(content)}
+                        </div>
+                        <div style="display: flex; justify-content: between; align-items: center; font-size: 0.8rem; color: #666;">
+                            <span><strong>Response Time:</strong> ${responseTime}</span>
+                            <span style="float: right;"><strong>ID:</strong> ${reply.id}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            repliesContainer.innerHTML = repliesHtml;
+        }
+
+        // Load More Replies
+        function loadMoreReplies() {
+            currentRepliesLimit += 10;
+            fetchAndDisplayReplies();
+        }
+
+        // Refresh Reply Data
+        async function refreshReplyData() {
+            showReplyStatusMessage('Refreshing reply data...', 'info');
+            try {
+                await updateReplyStats();
+                await fetchAndDisplayReplies();
+                showReplyStatusMessage('Reply data refreshed successfully!', 'success');
+            } catch (error) {
+                console.error('Error refreshing reply data:', error);
+                showReplyStatusMessage('Error refreshing data: ' + error.message, 'error');
+            }
+        }
+
+        // Clear Reply Data
+        async function clearReplyData() {
+            if (!confirm('Are you sure you want to clear all reply data? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear-reply-data', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reset local counters
+                    lastReplyCount = 0;
+                    currentRepliesLimit = 10;
+                    repliesLoaded = false;
+                    
+                    // Refresh displays
+                    await updateReplyStats();
+                    await fetchAndDisplayReplies();
+                    
+                    showReplyStatusMessage('All reply data cleared successfully!', 'success');
+                    addToActivityFeed('🗑️ All reply data has been cleared');
+                } else {
+                    showReplyStatusMessage('Failed to clear reply data', 'error');
+                }
+            } catch (error) {
+                console.error('Error clearing reply data:', error);
+                showReplyStatusMessage('Error clearing data: ' + error.message, 'error');
+            }
+        }
+
+        // Export Reply Data
+        async function exportReplyData() {
+            try {
+                const response = await fetch('/reply-stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const exportData = {
+                        exportedAt: new Date().toISOString(),
+                        statistics: data.data.stats,
+                        replies: data.data.replies || []
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                        type: 'application/json'
+                    });
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `whatsapp-replies-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showReplyStatusMessage('Reply data exported successfully!', 'success');
+                    addToActivityFeed('📥 Reply data exported to JSON file');
+                }
+            } catch (error) {
+                console.error('Error exporting reply data:', error);
+                showReplyStatusMessage('Error exporting data: ' + error.message, 'error');
+            }
+        }
+
+        // Show New Reply Notification
+        function showNewReplyNotification(count) {
+            // Create a temporary notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 1rem;
+                border-radius: 5px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">📨</span>
+                    <div>
+                        <div style="font-weight: bold;">New Reply${count > 1 ? 's' : ''}!</div>
+                        <div style="font-size: 0.9rem;">${count} new repl${count > 1 ? 'ies' : 'y'} received</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Add to Activity Feed
+        function addToActivityFeed(message) {
+            const activityFeed = document.getElementById('activity-feed');
+            if (!activityFeed) return;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `<div style="color: #00ff00; margin-bottom: 4px;">
+                <span style="color: #666; font-size: 0.8em;">${timestamp}</span> 
+                <span style="margin-right: 8px;">📨</span>${escapeHtml(message)}
+            </div>`;
+            
+            // Remove placeholder if it exists
+            if (activityFeed.innerHTML.includes('Live reply activity will appear here')) {
+                activityFeed.innerHTML = logEntry;
+            } else {
+                activityFeed.innerHTML += logEntry;
+            }
+            
+            // Auto-scroll to bottom
+            activityFeed.scrollTop = activityFeed.scrollHeight;
+        }
+
+        // Show Reply Status Message
+        function showReplyStatusMessage(message, type) {
+            // Create temporary status message for replies section
+            const statusDiv = document.createElement('div');
+            statusDiv.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                padding: 1rem;
+                border-radius: 5px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
+            `;
+            
+            switch(type) {
+                case 'success':
+                    statusDiv.style.backgroundColor = '#28a745';
+                    break;
+                case 'error':
+                    statusDiv.style.backgroundColor = '#dc3545';
+                    break;
+                case 'info':
+                    statusDiv.style.backgroundColor = '#17a2b8';
+                    break;
+                default:
+                    statusDiv.style.backgroundColor = '#6c757d';
+            }
+            
+            statusDiv.textContent = message;
+            document.body.appendChild(statusDiv);
+            
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 4000);
+        }
+
+        // Show Replies Section and Start Monitoring
+        function showRepliesSection() {
+            showSection('replies');
+            startReplyMonitoring();
+            updateReplyStats();
+            fetchAndDisplayReplies();
+        }
+            
+            return result;
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load templates from storage
+            loadTemplatesFromStorage();
+            displayTemplates();
+            
+            // Load contacts from server and update status
+            await loadContacts();
+            await updateDashboardStatus();
+            
+            // Check for QR code on page load
+            await checkForQRCode();
+            
+            // Start real-time logs polling
+            startLogsPolling();
+            
+            // Simulate server uptime
+            let uptime = 0;
+            setInterval(() => {
+                uptime++;
+                document.getElementById('server-uptime').textContent = formatUptime(uptime);
+            }, 1000);
+            
+            // Update dashboard status every 5 seconds
+            setInterval(updateDashboardStatus, 5000);
+            
+            // Check for QR code every 3 seconds
+            setInterval(checkForQRCode, 3000);
+        });
+
+        // Check for QR code availability
+        async function checkForQRCode() {
+            try {
+                const statusResponse = await fetch('/status');
+                const statusData = await statusResponse.json();
+                
+                const qrSection = document.getElementById('qr-section');
+                
+                if (statusData.connected) {
+                    // Hide QR section if connected
+                    qrSection.style.display = 'none';
+                } else if (statusData.qrAvailable) {
+                    // Show QR code if available and not connected
+                    await displayQRCode();
+                }
+            } catch (error) {
+                console.log('QR check error:', error);
+            }
+        }
+
+        // Load contacts from server
+        async function loadContacts() {
+            try {
+                // Get current status to see if there are any loaded contacts
+                const statusResponse = await fetch('/status');
+                const statusData = await statusResponse.json();
+                
+                if (statusData.progress && statusData.progress.total > 0) {
+                    updateDashboardStats(statusData.progress.total);
+                    document.getElementById('contacts-loaded').textContent = statusData.progress.total;
+                    showStatusMessage(`${statusData.progress.total} contacts loaded from previous session`, 'info');
+                }
+            } catch (error) {
+                console.log('Error loading contacts:', error);
+            }
+        }
+
+        // Update dashboard status
+        async function updateDashboardStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                // Update connection status
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                
+                if (data.connected) {
+                    statusText.textContent = 'Connected';
+                    statusIndicator.classList.add('connected');
+                    document.getElementById('connection-status').textContent = 'Connected to WhatsApp';
+                } else {
+                    statusText.textContent = 'Disconnected';
+                    statusIndicator.classList.remove('connected');
+                    document.getElementById('connection-status').textContent = 'Not Connected';
+                }
+                
+                // Update messages sent count
+                if (data.progress) {
+                    document.getElementById('messages-sent').textContent = data.progress.current || 0;
+                }
+                
+                // Update contacts count
+                const contactList = document.getElementById('contact-list');
+                document.getElementById('contacts-count').textContent = contactList.options.length || 0;
+                
+            } catch (error) {
+                console.error('Error updating dashboard status:', error);
+            }
+        }
+
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>

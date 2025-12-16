@@ -14,6 +14,24 @@ const io = new Server(server);
 let contacts = [];
 let sendingInProgress = false;
 let sendInterval = null;
+let currentQR = null;
+
+// Spintax message generation
+function generateSpintaxMessage(text) {
+    let result = text;
+
+    // Process spintax patterns - replace with random option
+    const spintaxPattern = /\{([^}]+)\}/g;
+    let match;
+
+    while ((match = spintaxPattern.exec(text)) !== null) {
+        const options = match[1].split('|');
+        const randomOption = options[Math.floor(Math.random() * options.length)];
+        result = result.replace(match[0], randomOption);
+    }
+
+    return result;
+}
 
 // WhatsApp Client
 const client = new Client({
@@ -38,6 +56,184 @@ const client = new Client({
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// QR code endpoint
+app.get('/qr', (req, res) => {
+    if (currentQR) {
+        res.json({ qr: currentQR });
+    } else {
+        res.json({ qr: null });
+    }
+});
+
+// Status endpoint
+app.get('/status', (req, res) => {
+    res.json({
+        connected: global.whatsappConnected || false,
+        qrAvailable: !!currentQR,
+        progress: {
+            current: contacts.filter(c => c.status === 'sent').length,
+            total: contacts.length,
+            sending: sendingInProgress
+        }
+    });
+});
+
+// Upload contacts endpoint
+app.post('/upload-contacts', express.json(), (req, res) => {
+    try {
+        const { contacts: newContacts } = req.body;
+
+        if (!Array.isArray(newContacts)) {
+            return res.json({ success: false, error: 'Invalid contacts data' });
+        }
+
+        // Add to existing contacts
+        contacts = [...contacts, ...newContacts];
+
+        // Emit update to all clients
+        io.emit('contactsUpdated', { contacts });
+
+        res.json({
+            success: true,
+            message: `Added ${newContacts.length} contacts successfully`,
+            phoneNumbers: newContacts.map(c => c.number)
+        });
+    } catch (error) {
+        console.error('Upload contacts error:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Get contacts endpoint
+app.get('/contacts', (req, res) => {
+    res.json({ contacts });
+});
+
+// Send bulk messages endpoint
+app.post('/send-bulk', express.json(), (req, res) => {
+    try {
+        const { message, delay, useSpintax } = req.body;
+
+        if (sendingInProgress) {
+            return res.json({ success: false, error: 'Sending already in progress' });
+        }
+
+        if (contacts.length === 0) {
+            return res.json({ success: false, error: 'No contacts loaded' });
+        }
+
+        // Start sending process
+        sendingInProgress = true;
+        let sentCount = 0;
+
+        const sendNextMessage = async () => {
+            if (!sendingInProgress || sentCount >= contacts.length) {
+                sendingInProgress = false;
+                io.emit('sendProgress', {
+                    sent: sentCount,
+                    total: contacts.length,
+                    status: 'Completed'
+                });
+                return;
+            }
+
+            const contact = contacts[sentCount];
+
+            // Generate unique message for this contact if spintax is enabled
+            const finalMessage = useSpintax ? generateSpintaxMessage(message) : message;
+
+            io.emit('sendProgress', {
+                sent: sentCount,
+                total: contacts.length,
+                currentNumber: contact.number,
+                currentName: contact.name,
+                status: `Sending to ${contact.name || contact.number}...`
+            });
+
+            try {
+                contact.status = 'sending';
+                io.emit('contactsUpdated', { contacts });
+
+                // Format phone number correctly for WhatsApp
+                let formattedNumber = contact.number.trim();
+
+                // Remove any leading + if present
+                if (formattedNumber.startsWith('+')) {
+                    formattedNumber = formattedNumber.substring(1);
+                }
+
+                // Remove any leading 0
+                if (formattedNumber.startsWith('0')) {
+                    formattedNumber = formattedNumber.substring(1);
+                }
+
+                // Add country code if missing (Pakistan = 92)
+                if (!formattedNumber.startsWith('92')) {
+                    formattedNumber = '92' + formattedNumber;
+                }
+
+                const chatId = `${formattedNumber}@c.us`;
+                console.log('Sending to:', chatId);
+
+                // Check if user is registered on WhatsApp
+                const isRegistered = await client.isRegisteredUser(chatId);
+                if (!isRegistered) {
+                    console.log('Number not registered on WhatsApp:', chatId);
+                    contact.status = 'failed';
+                    io.emit('messageStatus', {
+                        number: contact.number,
+                        name: contact.name,
+                        message: finalMessage,
+                        status: 'failed',
+                        timestamp: new Date().toISOString()
+                    });
+                    sentCount++;
+                    io.emit('contactsUpdated', { contacts });
+                    setTimeout(sendNextMessage, delay * 1000);
+                    return;
+                }
+
+                await client.sendMessage(chatId, finalMessage);
+
+                contact.status = 'sent';
+                io.emit('messageStatus', {
+                    number: contact.number,
+                    name: contact.name,
+                    message: finalMessage,
+                    status: 'sent',
+                    timestamp: new Date().toISOString()
+                });
+
+                sentCount++;
+            } catch (error) {
+                console.error('Error sending message:', error);
+                contact.status = 'failed';
+
+                io.emit('messageStatus', {
+                    number: contact.number,
+                    name: contact.name,
+                    message: finalMessage,
+                    status: 'failed',
+                    timestamp: new Date().toISOString()
+                });
+
+                sentCount++;
+            }
+
+            io.emit('contactsUpdated', { contacts });
+            setTimeout(sendNextMessage, delay * 1000);
+        };
+
+        // Start sending
+        sendNextMessage();
+
+        res.json({ success: true, message: `Started sending to ${contacts.length} contacts` });
+    } catch (error) {
+        console.error('Send bulk error:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
 // Socket.io connection
 io.on('connection', (socket) => {
     console.log('Client connected');
@@ -48,10 +244,11 @@ io.on('connection', (socket) => {
     // Handle start sending
     socket.on('startSending', (data) => {
         if (sendingInProgress) return;
-        
+
         sendingInProgress = true;
-        const message = data.message;
+        const baseMessage = data.message;
         const delay = data.delay * 1000; // Convert to milliseconds
+        const useSpintax = data.useSpintax || false;
         let sentCount = 0;
         
         // Send messages with delay
@@ -67,7 +264,10 @@ io.on('connection', (socket) => {
             }
             
             const contact = contacts[sentCount];
-            
+
+            // Generate unique message for this contact if spintax is enabled
+            const message = useSpintax ? generateSpintaxMessage(baseMessage) : baseMessage;
+
             io.emit('sendProgress', {
                 sent: sentCount,
                 total: contacts.length,
@@ -75,7 +275,7 @@ io.on('connection', (socket) => {
                 currentName: contact.name,
                 status: `Sending to ${contact.name || contact.number}...`
             });
-            
+
             try {
                 contact.status = 'sending';
                 io.emit('contactsUpdated', { contacts });
@@ -176,9 +376,8 @@ io.on('connection', (socket) => {
 // WhatsApp Client Events
 client.on('qr', (qr) => {
     console.log('QR Code generated');
-    qrcode.toDataURL(qr, (err, url) => {
-        io.emit('qr', url);
-    });
+    currentQR = qr;
+    io.emit('qr', qr);
 });
 
 client.on('ready', () => {
