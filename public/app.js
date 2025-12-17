@@ -9,9 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const qrSection = document.getElementById('qrSection');
     const sendBulkBtn = document.getElementById('sendBulkBtn');
     const stopBulkBtn = document.getElementById('stopBulkBtn');
-    const totalContacts = document.getElementById('totalContacts'); 
-    const messagesSent = document.getElementById('messagesSent');
-    const messagesPending = document.getElementById('messagesPending');
+    const totalContactsElement = document.getElementById('totalContacts');
+    const messagesSentElement = document.getElementById('messagesSent');
+    const messagesPendingElement = document.getElementById('messagesPending');
     const contactList = document.getElementById('contactList');
     const historyList = document.getElementById('historyList');
     const progressBar = document.getElementById('progressBar');
@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Contacts state
     let contacts = [];
     let sendingInProgress = false;
+    let sentCount = 0;
+    let totalContacts = 0;
     
     // Socket event handlers
     socket.on('qr', (qr) => {
@@ -49,6 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     socket.on('sendProgress', (data) => {
+        sentCount = data.sent;
+        totalContacts = data.total;
         const progress = (data.sent / data.total) * 100;
         progressBar.style.width = `${progress}%`;
         progressBar.textContent = `${Math.round(progress)}%`;
@@ -61,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
             sendBulkBtn.disabled = false;
             stopBulkBtn.classList.add('d-none');
             progressModal.hide();
+            alert('All messages sent successfully!');
         }
     });
     
@@ -72,11 +77,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update statistics
     function updateStats() {
-        totalContacts.textContent = contacts.length;
+        totalContactsElement.textContent = contacts.length;
         const sent = contacts.filter(c => c.status === 'sent').length;
         const pending = contacts.filter(c => c.status === 'pending').length;
-        messagesSent.textContent = sent;
-        messagesPending.textContent = pending;
+        messagesSentElement.textContent = sent;
+        messagesPendingElement.textContent = pending;
     }
     
     // Render contact list
@@ -207,14 +212,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     const number = parts[phoneIndex] ? parts[phoneIndex].trim() : '';
                     const name = (nameIndex !== -1 && parts[nameIndex]) ? parts[nameIndex].trim() : '';
                     if (number) {
-                        newContacts.push({
-                            number: number,
-                            name: name
-                        });
+                        // Check for duplicates
+                        const isDuplicate = contacts.some(c => c.number === number);
+                        if (!isDuplicate) {
+                            newContacts.push({
+                                number: number,
+                                name: name
+                            });
+                        }
                     }
                 }
             }
-
+            
             contacts = [...contacts, ...newContacts];
             socket.emit('updateContacts', { contacts });
             alert(`Added ${newContacts.length} contacts`);
@@ -232,7 +241,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        contacts.push({ number: phone, name: name || '' });
+        // Check for duplicates
+        const isDuplicate = contacts.some(c => c.number === phone);
+        if (!isDuplicate) {
+            contacts.push({ number: phone, name: name || '' });
+        }
         socket.emit('updateContacts', { contacts });
 
         document.getElementById('manualPhone').value = '';

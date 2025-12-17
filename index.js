@@ -124,16 +124,21 @@ app.post("/upload-contacts", express.json(), (req, res) => {
       return res.json({ success: false, error: "Invalid contacts data" });
     }
 
-    // Add to existing contacts
-    contacts = [...contacts, ...newContacts];
+    // Filter out duplicates based on phone number
+    const uniqueNewContacts = newContacts.filter(newContact =>
+      !contacts.some(existingContact => existingContact.number === newContact.number)
+    );
+
+    // Add unique contacts to existing contacts
+    contacts = [...contacts, ...uniqueNewContacts];
 
     // Emit update to all clients
     io.emit("contactsUpdated", { contacts });
 
     res.json({
       success: true,
-      message: `Added ${newContacts.length} contacts successfully`,
-      phoneNumbers: newContacts.map((c) => c.number),
+      message: `Added ${uniqueNewContacts.length} unique contacts successfully`,
+      phoneNumbers: uniqueNewContacts.map((c) => c.number),
     });
   } catch (error) {
     console.error("Upload contacts error:", error);
@@ -260,12 +265,12 @@ app.post("/send-bulk", express.json(), (req, res) => {
       }
 
       io.emit("contactsUpdated", { contacts });
-      // Use the delay parameter correctly (it's already in seconds from frontend)
+      // Wait for the delay before sending next message
       setTimeout(sendNextMessage, delay * 1000);
     };
 
-    // Start sending
-    sendNextMessage();
+    // Start sending with initial delay
+    setTimeout(sendNextMessage, delay * 1000);
 
     res.json({
       success: true,
@@ -397,8 +402,8 @@ io.on("connection", (socket) => {
       setTimeout(sendNextMessage, delay);
     };
 
-    // Start sending
-    sendNextMessage();
+    // Start sending with initial delay
+    setTimeout(sendNextMessage, delay);
   });
 
   // Handle stop sending

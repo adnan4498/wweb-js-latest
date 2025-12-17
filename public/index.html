@@ -1036,17 +1036,14 @@
         }
 
         // Stop Sending
-        async function stopSending() {
+        function stopSending() {
             try {
-                const response = await fetch('/stop', {
-                    method: 'POST'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showStatusMessage(result.message, 'info');
+                if (socket) {
+                    socket.emit('stopSending');
+                    showStatusMessage('Stop signal sent to server.', 'info');
                     document.getElementById('progress-section').style.display = 'none';
+                } else {
+                    showStatusMessage('Socket connection not available.', 'error');
                 }
             } catch (error) {
                 console.error('Stop sending error:', error);
@@ -1098,31 +1095,15 @@
                 document.getElementById('message-logs').innerHTML = '<p style="color: #666; text-align: center;">Sending started...</p>';
                 document.getElementById('progress-bar').style.width = '0%';
 
-                // Send bulk message request to server
-                const response = await fetch('/send-bulk', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: messageText,
-                        delay: delay,
-                        useSpintax: hasSpintax
-                    })
+                // Send bulk message request via socket.io
+                socket.emit('startSending', {
+                    message: messageText,
+                    delay: delay,
+                    useSpintax: hasSpintax
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    document.getElementById('last-message-time').textContent = new Date().toLocaleTimeString();
-                    showStatusMessage(result.message, 'success');
-
-                    // Start monitoring progress
-                    monitorProgress();
-                } else {
-                    showStatusMessage('Failed to start bulk sending: ' + (result.error || 'Unknown error'), 'error');
-                }
-
+                document.getElementById('last-message-time').textContent = new Date().toLocaleTimeString();
+                showStatusMessage(`Started sending to ${statusData.progress.total} contacts`, 'success');
             } catch (error) {
                 console.error('Send message error:', error);
                 showStatusMessage('Error sending messages: ' + error.message, 'error');
@@ -1258,39 +1239,6 @@
             }
         }
 
-        // Monitor Progress
-        async function monitorProgress() {
-            const checkInterval = setInterval(async () => {
-                try {
-                    const response = await fetch('/status');
-                    const data = await response.json();
-
-                    // Update progress display
-                    const sent = contacts.filter(c => c.status === 'sent').length;
-                    const failed = contacts.filter(c => c.status === 'failed').length;
-                    const remaining = contacts.length - sent - failed;
-                    
-                    document.getElementById('sent-count').textContent = sent;
-                    document.getElementById('total-count').textContent = contacts.length;
-                    document.getElementById('failed-count').textContent = failed;
-                    document.getElementById('remaining-count').textContent = remaining;
-
-                    // Update progress bar
-                    const percentage = contacts.length > 0 ? (sent / contacts.length) * 100 : 0;
-                    document.getElementById('progress-bar').style.width = percentage + '%';
-
-                    // Update messages sent counter
-                    document.getElementById('messages-sent').textContent = sent;
-
-                    if (!data.progress.sending) {
-                        clearInterval(checkInterval);
-                        showStatusMessage(`Bulk sending completed! ${sent} messages sent, ${failed} failed.`, 'success');
-                    }
-                } catch (error) {
-                    console.error('Progress monitoring error:', error);
-                }
-            }, 1000);
-        }
         
         // Update message logs
         function addMessageLog(number, name, message, status) {
@@ -1505,6 +1453,31 @@
                 }
     
                 showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
+            });
+
+            // Socket event handlers for progress tracking
+            socket.on('sendProgress', (data) => {
+                document.getElementById('sent-count').textContent = data.sent;
+                document.getElementById('total-count').textContent = data.total;
+                document.getElementById('current-contact-info').textContent = data.currentName || data.currentNumber || '-';
+                document.getElementById('current-sending-status').textContent = data.status || 'Sending...';
+                
+                const percentage = data.total > 0 ? (data.sent / data.total) * 100 : 0;
+                document.getElementById('progress-bar').style.width = percentage + '%';
+                
+                if (data.sent === data.total) {
+                    showStatusMessage('All messages sent successfully!', 'success');
+                    document.getElementById('sending-progress-section').style.display = 'block';
+                }
+            });
+
+            socket.on('messageStatus', (data) => {
+                addMessageLog(data.number, data.name, data.message, data.status);
+            });
+
+            socket.on('contactsUpdated', (data) => {
+                // Update contacts display when contacts are updated
+                loadContacts();
             });
 
             // Load contacts from server and update status
