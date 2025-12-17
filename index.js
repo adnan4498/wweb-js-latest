@@ -1,14 +1,51 @@
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const connectDB = require('./config/database');
+
+// Connect to database
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Root route - serve login page directly
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Dashboard route - serve dashboard for authenticated users
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Login route - serve login page
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Serve static files (but not for root route)
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false // Disable automatic index.html serving
+}));
+
+// Import routes
+const authRoutes = require('./routes/auth');
+
+// Mount routers
+app.use('/api/auth', authRoutes);
 
 // Contacts storage
 let contacts = [];
@@ -52,9 +89,6 @@ const client = new Client({
         timeout: 0
     }
 });
-
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
 
 // QR code endpoint
 app.get('/qr', (req, res) => {
@@ -386,6 +420,9 @@ client.on('ready', () => {
     
     // Store connection status in memory
     global.whatsappConnected = true;
+    
+    // Clear any existing QR code
+    currentQR = null;
 });
 
 
@@ -396,8 +433,32 @@ client.on('message', msg => {
 // Initialize WhatsApp client first
 client.initialize();
 
-// Start server
+// API info route
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'WhatsApp Bulk Sender API',
+    version: '1.0.0',
+    endpoints: {
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        getProfile: 'GET /api/auth/me',
+        updateProfile: 'PUT /api/auth/updatedetails'
+      }
+    }
+  });
+});
+
+// Handle 404
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
+});
+
 const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
