@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const qrSection = document.getElementById('qrSection');
     const sendBulkBtn = document.getElementById('sendBulkBtn');
     const stopBulkBtn = document.getElementById('stopBulkBtn');
-    const totalContacts = document.getElementById('totalContacts');
+    const totalContacts = document.getElementById('totalContacts'); 
     const messagesSent = document.getElementById('messagesSent');
     const messagesPending = document.getElementById('messagesPending');
     const contactList = document.getElementById('contactList');
