@@ -458,9 +458,9 @@
                     <div class="card-content">
                         <div style="display: grid; gap: 1rem;">
                             <div>
-                                <label for="excel-file" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Upload CSV File:</label>
-                                <input type="file" id="excel-file" accept=".csv" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
-                                <small style="color: #666;">CSV file should have columns like "phone", "number", "mobile" for phone numbers</small>
+                                <label for="excel-file" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Upload File:</label>
+                                <input type="file" id="excel-file" accept=".csv,.xlsx,.xls" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                                <small style="color: #666;">CSV, Excel (.xlsx, .xls) files with columns like "phone", "number", "mobile" for phone numbers</small>
                             </div>
 
                             <div style="display: flex; gap: 1rem;">
@@ -523,6 +523,41 @@
                 <!-- Status Messages -->
                 <div class="status-message status-info" id="send-status">
                     Ready to send messages. Please upload contacts and connect to WhatsApp first.
+                </div>
+                
+                <!-- Sending Progress Section -->
+                <div class="dashboard-card" id="sending-progress-section" style="max-width: 800px; margin-top: 2rem; display: none;">
+                    <div class="card-header">
+                        <div class="card-icon">📤</div>
+                        <div class="card-title">Sending Progress</div>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <h4>📊 Current Status</h4>
+                                <p id="current-sending-status">Not sending</p>
+                            </div>
+                            <div>
+                                <h4>📱 Current Contact</h4>
+                                <p id="current-contact-info">-</p>
+                            </div>
+                            <div>
+                                <h4>⏱️ Progress</h4>
+                                <p>Sent: <strong id="sent-count">0</strong> / <strong id="total-count">0</strong></p>
+                                <p>Failed: <strong id="failed-count">0</strong></p>
+                                <p>Remaining: <strong id="remaining-count">0</strong></p>
+                            </div>
+                            <div>
+                                <h4>📝 Message Logs</h4>
+                                <div id="message-logs" style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 1rem; background: #f8f9fa; border-radius: 5px; margin-top: 0.5rem;">
+                                    <p style="color: #666; text-align: center;">No messages sent yet</p>
+                                </div>
+                            </div>
+                            <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 1rem;">
+                                <div id="progress-bar" style="background: #25D366; height: 100%; border-radius: 10px; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -790,8 +825,8 @@
                 return;
             }
 
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                showStatusMessage('Please select a CSV file.', 'error');
+            if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+                showStatusMessage('Please select a CSV or Excel file.', 'error');
                 return;
             }
 
@@ -800,38 +835,88 @@
 
                 let phoneNumbers = [];
 
-                // Process CSV
-                const text = await file.text();
-                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    // Process CSV
+                    const text = await file.text();
+                    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
 
-                if (lines.length === 0) {
-                    showStatusMessage('CSV file is empty.', 'error');
-                    return;
-                }
+                    if (lines.length === 0) {
+                        showStatusMessage('CSV file is empty.', 'error');
+                        return;
+                    }
 
-                // Check if first line is header
-                const firstLine = lines[0].toLowerCase();
-                const hasHeader = firstLine.includes('phone') || firstLine.includes('number') || firstLine.includes('mobile');
+                    // Check if first line is header
+                    const firstLine = lines[0].toLowerCase();
+                    const hasHeader = firstLine.includes('phone') || firstLine.includes('number') || firstLine.includes('mobile');
 
-                let dataLines = lines;
-                let phoneIndex = 0;
-                let nameIndex = 1;
+                    let dataLines = lines;
+                    let phoneIndex = 0;
+                    let nameIndex = 1;
 
-                if (hasHeader) {
-                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                    phoneIndex = headers.findIndex(h => h.includes('phone') || h.includes('number') || h.includes('mobile'));
-                    nameIndex = headers.findIndex(h => h.includes('name'));
-                    dataLines = lines.slice(1);
-                }
+                    if (hasHeader) {
+                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                        phoneIndex = headers.findIndex(h => h.includes('phone') || h.includes('number') || h.includes('mobile'));
+                        nameIndex = headers.findIndex(h => h.includes('name'));
+                        dataLines = lines.slice(1);
+                    }
 
-                for (const line of dataLines) {
-                    const parts = line.split(',');
-                    if (parts.length > phoneIndex) {
-                        const number = parts[phoneIndex] ? parts[phoneIndex].trim() : '';
-                        const name = (nameIndex !== -1 && parts[nameIndex]) ? parts[nameIndex].trim() : '';
-                        if (number) {
-                            phoneNumbers.push({ number, name });
+                    for (const line of dataLines) {
+                        const parts = line.split(',');
+                        if (parts.length > phoneIndex) {
+                            const number = parts[phoneIndex] ? parts[phoneIndex].trim() : '';
+                            const name = (nameIndex !== -1 && parts[nameIndex]) ? parts[nameIndex].trim() : '';
+                            if (number) {
+                                phoneNumbers.push({ number, name });
+                            }
                         }
+                    }
+                } else {
+                    // Process Excel - load XLSX library dynamically
+                    try {
+                        // Check if XLSX is already loaded
+                        if (typeof XLSX === 'undefined') {
+                            // Dynamically load the library
+                            const script = document.createElement('script');
+                            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                            script.onload = function() {
+                                console.log('XLSX library loaded successfully');
+                                // Retry the upload after library loads
+                                uploadContacts();
+                            };
+                            script.onerror = function() {
+                                showStatusMessage('Failed to load Excel processing library. Please try again.', 'error');
+                            };
+                            document.head.appendChild(script);
+                            return; // Wait for library to load
+                        }
+    
+                        const data = await file.arrayBuffer();
+                        const workbook = XLSX.read(data);
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    
+                        if (jsonData.length === 0) {
+                            showStatusMessage('Excel file is empty.', 'error');
+                            return;
+                        }
+    
+                        // Find phone and name columns
+                        const headers = Object.keys(jsonData[0]);
+                        const phoneIndex = headers.findIndex(h => h.toLowerCase().includes('phone') || h.toLowerCase().includes('number') || h.toLowerCase().includes('mobile') || h.toLowerCase().includes('phone_number') || h.toLowerCase().includes('numbers'));
+                        const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
+    
+                        for (const row of jsonData) {
+                            const number = row[headers[phoneIndex]] ? String(row[headers[phoneIndex]]).trim() : '';
+                            const name = (nameIndex !== -1 && row[headers[nameIndex]]) ? String(row[headers[nameIndex]]).trim() : '';
+                            if (number) {
+                                phoneNumbers.push({ number, name });
+                            }
+                        }
+                    } catch (excelError) {
+                        console.error('Excel processing error:', excelError);
+                        showStatusMessage('Error processing Excel file: ' + excelError.message, 'error');
+                        return;
                     }
                 }
 
@@ -990,7 +1075,7 @@
                 }
 
                 if (statusData.progress.total === 0) {
-                    showStatusMessage('Please upload a CSV file with phone numbers first!', 'error');
+                    showStatusMessage('Please upload a file with phone numbers first!', 'error');
                     return;
                 }
 
@@ -1001,6 +1086,17 @@
                 } else {
                     showStatusMessage(`Starting bulk message sending to ${statusData.progress.total} contacts...`, 'info');
                 }
+
+                // Show progress section
+                document.getElementById('sending-progress-section').style.display = 'block';
+                document.getElementById('sent-count').textContent = '0';
+                document.getElementById('total-count').textContent = statusData.progress.total;
+                document.getElementById('failed-count').textContent = '0';
+                document.getElementById('remaining-count').textContent = statusData.progress.total;
+                document.getElementById('current-sending-status').textContent = 'Initializing...';
+                document.getElementById('current-contact-info').textContent = '-';
+                document.getElementById('message-logs').innerHTML = '<p style="color: #666; text-align: center;">Sending started...</p>';
+                document.getElementById('progress-bar').style.width = '0%';
 
                 // Send bulk message request to server
                 const response = await fetch('/send-bulk', {
@@ -1164,38 +1260,67 @@
 
         // Monitor Progress
         async function monitorProgress() {
-            const progressSection = document.getElementById('progress-section');
-            progressSection.style.display = 'block';
-
             const checkInterval = setInterval(async () => {
                 try {
-                    const response = await fetch('/progress');
+                    const response = await fetch('/status');
                     const data = await response.json();
 
                     // Update progress display
-                    document.getElementById('progress-current').textContent = data.current;
-                    document.getElementById('progress-total').textContent = data.total;
-                    document.getElementById('progress-remaining').textContent = data.remaining;
+                    const sent = contacts.filter(c => c.status === 'sent').length;
+                    const failed = contacts.filter(c => c.status === 'failed').length;
+                    const remaining = contacts.length - sent - failed;
+                    
+                    document.getElementById('sent-count').textContent = sent;
+                    document.getElementById('total-count').textContent = contacts.length;
+                    document.getElementById('failed-count').textContent = failed;
+                    document.getElementById('remaining-count').textContent = remaining;
 
                     // Update progress bar
-                    const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
+                    const percentage = contacts.length > 0 ? (sent / contacts.length) * 100 : 0;
                     document.getElementById('progress-bar').style.width = percentage + '%';
 
                     // Update messages sent counter
-                    document.getElementById('messages-sent').textContent = data.current;
+                    document.getElementById('messages-sent').textContent = sent;
 
-                    if (!data.sending) {
+                    if (!data.progress.sending) {
                         clearInterval(checkInterval);
-                        showStatusMessage(`Bulk sending completed! ${data.current} messages processed.`, 'success');
-
-                        setTimeout(() => {
-                            progressSection.style.display = 'none';
-                        }, 5000);
+                        showStatusMessage(`Bulk sending completed! ${sent} messages sent, ${failed} failed.`, 'success');
                     }
                 } catch (error) {
                     console.error('Progress monitoring error:', error);
                 }
             }, 1000);
+        }
+        
+        // Update message logs
+        function addMessageLog(number, name, message, status) {
+            const logsDiv = document.getElementById('message-logs');
+            const logEntry = document.createElement('div');
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const displayName = name || number;
+            
+            logEntry.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; margin: 0.25rem 0; background: ${status === 'sent' ? '#d4edda' : status === 'failed' ? '#f8d7da' : '#d1ecf1'}; border-left: 4px solid ${status === 'sent' ? '#28a745' : status === 'failed' ? '#dc3545' : '#0c5460'}; border-radius: 4px;">
+                    <div style="flex: 1;">
+                        <strong>${timestamp}</strong> - ${displayName}
+                        <div style="font-size: 0.9em; color: #666; margin-top: 0.25rem;">${message.substring(0, 50)}${message.length > 50 ? '...' : ''}</div>
+                    </div>
+                    <span style="margin-left: 1rem; font-weight: bold; color: ${status === 'sent' ? '#28a745' : status === 'failed' ? '#dc3545' : '#0c5460'};">${status.toUpperCase()}</span>
+                </div>
+            `;
+            
+            logsDiv.prepend(logEntry);
+            
+            // Auto-scroll to show newest logs
+            logsDiv.scrollTop = 0;
+        }
+        
+        // Update current sending status
+        function updateCurrentSending(number, name, status) {
+            const displayName = name || number;
+            document.getElementById('current-contact-info').textContent = displayName;
+            document.getElementById('current-sending-status').textContent = status;
         }
 
         // Update Dashboard Stats

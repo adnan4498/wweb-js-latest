@@ -106,6 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const index = parseInt(this.getAttribute('data-index'));
                 contacts.splice(index, 1);
                 socket.emit('updateContacts', { contacts });
+                // Re-render the list to update indices
+                renderContactList();
             });
         });
     }
