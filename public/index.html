@@ -459,8 +459,8 @@
                         <div style="display: grid; gap: 1rem;">
                             <div>
                                 <label for="excel-file" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Upload CSV File:</label>
-                                <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
-                                <small style="color: #666;">Excel (.xlsx, .xls) or CSV file should have columns like "phone", "number", "mobile" for phone numbers</small>
+                                <input type="file" id="excel-file" accept=".csv" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                                <small style="color: #666;">CSV file should have columns like "phone", "number", "mobile" for phone numbers</small>
                             </div>
 
                             <div style="display: flex; gap: 1rem;">
@@ -496,7 +496,7 @@
 
                             <div>
                                 <label for="delay-time" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Delay between messages (seconds):</label>
-                                <input type="number" id="delay-time" value="15" min="5" max="60" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
+                                <input type="number" id="delay-time" value="30" min="5" max="60" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px;">
                             </div>
 
                             <div style="display: flex; gap: 1rem;">
@@ -742,7 +742,23 @@
                 try {
                     const token = localStorage.getItem('token');
                     if (token) {
-                        // Call logout API to clear WhatsApp session
+                        // First, logout from WhatsApp
+                        const whatsappLogoutResponse = await fetch('/api/whatsapp/logout', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        const whatsappLogoutData = await whatsappLogoutResponse.json();
+                        if (!whatsappLogoutResponse.ok) {
+                            console.error('WhatsApp logout error:', whatsappLogoutData.error);
+                            // Continue with logout even if WhatsApp logout fails
+                        } else {
+                            console.log('WhatsApp logout successful:', whatsappLogoutData.message);
+                        }
+                        
+                        // Then logout from authentication
                         await fetch('/api/auth/logout', {
                             method: 'POST',
                             headers: {
@@ -774,8 +790,8 @@
                 return;
             }
 
-            if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
-                showStatusMessage('Please select a CSV or Excel file.', 'error');
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showStatusMessage('Please select a CSV file.', 'error');
                 return;
             }
 
@@ -784,67 +800,35 @@
 
                 let phoneNumbers = [];
 
-                if (file.name.toLowerCase().endsWith('.csv')) {
-                    // Process CSV
-                    const text = await file.text();
-                    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+                // Process CSV
+                const text = await file.text();
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
 
-                    if (lines.length === 0) {
-                        showStatusMessage('CSV file is empty.', 'error');
-                        return;
-                    }
+                if (lines.length === 0) {
+                    showStatusMessage('CSV file is empty.', 'error');
+                    return;
+                }
 
-                    // Check if first line is header
-                    const firstLine = lines[0].toLowerCase();
-                    const hasHeader = firstLine.includes('phone') || firstLine.includes('number') || firstLine.includes('mobile');
+                // Check if first line is header
+                const firstLine = lines[0].toLowerCase();
+                const hasHeader = firstLine.includes('phone') || firstLine.includes('number') || firstLine.includes('mobile');
 
-                    let dataLines = lines;
-                    let phoneIndex = 0;
-                    let nameIndex = 1;
+                let dataLines = lines;
+                let phoneIndex = 0;
+                let nameIndex = 1;
 
-                    if (hasHeader) {
-                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                        phoneIndex = headers.findIndex(h => h.includes('phone') || h.includes('number') || h.includes('mobile'));
-                        nameIndex = headers.findIndex(h => h.includes('name'));
-                        dataLines = lines.slice(1);
-                    }
+                if (hasHeader) {
+                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                    phoneIndex = headers.findIndex(h => h.includes('phone') || h.includes('number') || h.includes('mobile'));
+                    nameIndex = headers.findIndex(h => h.includes('name'));
+                    dataLines = lines.slice(1);
+                }
 
-                    for (const line of dataLines) {
-                        const parts = line.split(',');
-                        if (parts.length > phoneIndex) {
-                            const number = parts[phoneIndex] ? parts[phoneIndex].trim() : '';
-                            const name = (nameIndex !== -1 && parts[nameIndex]) ? parts[nameIndex].trim() : '';
-                            if (number) {
-                                phoneNumbers.push({ number, name });
-                            }
-                        }
-                    }
-                } else {
-                    // Process Excel
-                    if (typeof XLSX === 'undefined') {
-                        showStatusMessage('Excel processing library not loaded. Please refresh the page.', 'error');
-                        return;
-                    }
-
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data);
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                    if (jsonData.length === 0) {
-                        showStatusMessage('Excel file is empty.', 'error');
-                        return;
-                    }
-
-                    // Find phone and name columns
-                    const headers = Object.keys(jsonData[0]);
-                    const phoneIndex = headers.findIndex(h => h.toLowerCase().includes('phone') || h.toLowerCase().includes('number') || h.toLowerCase().includes('mobile'));
-                    const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
-
-                    for (const row of jsonData) {
-                        const number = row[headers[phoneIndex]] ? String(row[headers[phoneIndex]]).trim() : '';
-                        const name = (nameIndex !== -1 && row[headers[nameIndex]]) ? String(row[headers[nameIndex]]).trim() : '';
+                for (const line of dataLines) {
+                    const parts = line.split(',');
+                    if (parts.length > phoneIndex) {
+                        const number = parts[phoneIndex] ? parts[phoneIndex].trim() : '';
+                        const name = (nameIndex !== -1 && parts[nameIndex]) ? parts[nameIndex].trim() : '';
                         if (number) {
                             phoneNumbers.push({ number, name });
                         }
@@ -988,7 +972,7 @@
         // Send Messages
         async function sendMessages() {
             const messageText = document.getElementById('message-text').value;
-            const delay = parseInt(document.getElementById('delay-time').value) || 15;
+            const delay = parseInt(document.getElementById('delay-time').value) || 30;
 
             if (!messageText.trim()) {
                 showStatusMessage('Please enter a message text.', 'error');
@@ -1365,10 +1349,11 @@
                 const qrPlaceholder = document.getElementById('qr-placeholder');
                 const statusText = document.getElementById('status-text');
                 const connectionStatus = document.getElementById('connection-status');
-
+                const connectBtn = document.querySelector('.btn-primary[onclick="connectWhatsApp()"]');
+    
                 // Clear previous QR code
                 qrPlaceholder.innerHTML = '';
-
+    
                 // Generate QR code using QRCode.js
                 new QRCode(qrPlaceholder, {
                     text: qr,
@@ -1378,14 +1363,22 @@
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
-
+    
                 statusText.textContent = 'Waiting for scan...';
                 connectionStatus.textContent = 'QR Code Generated - Scan with WhatsApp';
                 qrSection.style.display = 'block';
-
+    
                 // Update timer
                 document.getElementById('qr-timer').textContent = 'Scan this QR code now (expires in ~60 seconds)';
-
+    
+                // Change button to Disconnect
+                if (connectBtn) {
+                    connectBtn.textContent = 'Disconnect WhatsApp';
+                    connectBtn.onclick = function() {
+                        logout();
+                    };
+                }
+    
                 showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
             });
 

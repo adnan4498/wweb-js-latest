@@ -41,6 +41,33 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     default: 100
   },
+  whatsappSession: {
+    type: {
+      status: {
+        type: String,
+        enum: ['not_connected', 'connected', 'logging_out', 'logged_out'],
+        default: 'not_connected'
+      },
+      clientId: {
+        type: String,
+        default: null
+      },
+      lastActive: {
+        type: Date,
+        default: null
+      },
+      loggedOutAt: {
+        type: Date,
+        default: null
+      }
+    },
+    default: () => ({
+      status: 'not_connected',
+      clientId: null,
+      lastActive: null,
+      loggedOutAt: null
+    })
+  },
   createdAt: {
     type: Date,
     default: Date.now
