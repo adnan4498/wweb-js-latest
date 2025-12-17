@@ -430,6 +430,11 @@ client.on("qr", (qr) => {
   io.emit("qr", qr);
 });
 
+client.on("authenticated", () => {
+  console.log("Client authenticated");
+  io.emit("authenticated");
+});
+
 client.on("ready", () => {
   console.log("WhatsApp Connected!");
   io.emit("ready", "Connected");
@@ -499,7 +504,12 @@ async function logoutWhatsAppSession(mainClient) {
                 currentQR = qr;
                 io.emit('qr', qr);
             });
-            
+
+            global.client.on('authenticated', () => {
+                console.log('Client authenticated');
+                io.emit('authenticated');
+            });
+
             global.client.on('ready', () => {
                 console.log('WhatsApp Connected!');
                 io.emit('ready', 'Connected');

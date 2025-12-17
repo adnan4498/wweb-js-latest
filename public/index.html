@@ -319,6 +319,123 @@
             border: 1px solid #bee5eb;
         }
 
+        /* Connection Loading Overlay */
+        .connection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .connection-loader {
+            background: white;
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .connection-loader h3 {
+            color: #25D366;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .connection-loader p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .step-circle.active {
+            background: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+
+        .step-circle.completed {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .step-circle.completed::before {
+            content: '✓';
+            font-size: 1.2rem;
+        }
+
+        .connection-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #25D366;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        .success-icon {
+            width: 60px;
+            height: 60px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 2rem;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .sidebar {
@@ -332,6 +449,14 @@
             .dashboard-grid {
                 grid-template-columns: 1fr;
                 gap: 1rem;
+            }
+
+            .connection-loader {
+                padding: 2rem 1.5rem;
+            }
+
+            .connection-loader h3 {
+                font-size: 1.3rem;
             }
         }
     </style>
@@ -606,6 +731,19 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Connection Loading Overlay -->
+    <div class="connection-overlay" id="connectionOverlay">
+        <div class="connection-loader">
+            <div class="connection-spinner" id="connectionSpinner"></div>
+            <h3 id="connectionTitle">Connecting to the server</h3>
+            <p id="connectionMessage">Please wait while we establish connection...</p>
+            <div class="step-indicator">
+                <div class="step-circle active" id="step1">1</div>
+                <div class="step-circle" id="step2">2</div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -1139,6 +1277,68 @@
 
         // ============ SUPPORTING FUNCTIONS ============
 
+        // Connection overlay functions
+        function showConnectionOverlay(title, message, step) {
+            const overlay = document.getElementById('connectionOverlay');
+            const titleEl = document.getElementById('connectionTitle');
+            const messageEl = document.getElementById('connectionMessage');
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const spinner = document.getElementById('connectionSpinner');
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            // Update steps
+            step1.classList.toggle('active', step === 1);
+            step1.classList.toggle('completed', step > 1);
+            step2.classList.toggle('active', step === 2);
+            step2.classList.toggle('completed', step > 2);
+
+            // Show spinner, hide success icon
+            spinner.style.display = 'block';
+            const successIcon = document.querySelector('.success-icon');
+            if (successIcon) successIcon.style.display = 'none';
+
+            overlay.style.display = 'flex';
+        }
+
+        function showConnectionSuccess() {
+            const titleEl = document.getElementById('connectionTitle');
+            const messageEl = document.getElementById('connectionMessage');
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const spinner = document.getElementById('connectionSpinner');
+
+            titleEl.textContent = 'WhatsApp Connected';
+            messageEl.textContent = 'Successfully connected to WhatsApp!';
+
+            // Update steps
+            step1.classList.remove('active');
+            step1.classList.add('completed');
+            step2.classList.remove('active');
+            step2.classList.add('completed');
+
+            // Hide spinner, show success icon
+            spinner.style.display = 'none';
+
+            let successIcon = document.querySelector('.success-icon');
+            if (!successIcon) {
+                successIcon = document.createElement('div');
+                successIcon.className = 'success-icon';
+                successIcon.innerHTML = '✓';
+                const loader = document.querySelector('.connection-loader');
+                loader.insertBefore(successIcon, loader.firstChild);
+            } else {
+                successIcon.style.display = 'block';
+            }
+        }
+
+        function hideConnectionOverlay() {
+            const overlay = document.getElementById('connectionOverlay');
+            overlay.style.display = 'none';
+        }
+
         // Monitor connection status
         async function monitorConnection() {
             const checkInterval = setInterval(async () => {
@@ -1423,10 +1623,10 @@
                 const statusText = document.getElementById('status-text');
                 const connectionStatus = document.getElementById('connection-status');
                 const connectBtn = document.querySelector('.btn-primary[onclick="connectWhatsApp()"]');
-    
+
                 // Clear previous QR code
                 qrPlaceholder.innerHTML = '';
-    
+
                 // Generate QR code using QRCode.js
                 new QRCode(qrPlaceholder, {
                     text: qr,
@@ -1436,14 +1636,14 @@
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
-    
+
                 statusText.textContent = 'Waiting for scan...';
                 connectionStatus.textContent = 'QR Code Generated - Scan with WhatsApp';
                 qrSection.style.display = 'block';
-    
+
                 // Update timer
                 document.getElementById('qr-timer').textContent = 'Scan this QR code now (expires in ~60 seconds)';
-    
+
                 // Change button to Disconnect
                 if (connectBtn) {
                     connectBtn.textContent = 'Disconnect WhatsApp';
@@ -1451,8 +1651,27 @@
                         logout();
                     };
                 }
-    
+
                 showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
+            });
+
+            socket.on('authenticated', () => {
+                console.log('QR scanned, client authenticated');
+
+                // Show connection overlay with step 1
+                showConnectionOverlay('Connecting to the server', 'Please wait while we establish connection...', 1);
+            });
+
+            socket.on('ready', () => {
+                console.log('WhatsApp Connected!');
+
+                // Update overlay to show success
+                showConnectionSuccess();
+
+                // Hide overlay after animation
+                setTimeout(() => {
+                    hideConnectionOverlay();
+                }, 2000);
             });
 
             // Socket event handlers for progress tracking
