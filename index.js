@@ -23,28 +23,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Root route - serve login page directly
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
-
-// Dashboard route - serve dashboard for authenticated users
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// Login route - serve login page
-app.get("/login.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
-
-// Serve static files (but not for root route)
-app.use(
-  express.static(path.join(__dirname, "public"), {
-    index: false, // Disable automatic index.html serving
-  })
-);
-
 // Import routes
 const authRoutes = require("./routes/auth");
 
