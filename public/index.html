@@ -167,6 +167,25 @@
             margin-bottom: 2rem;
         }
 
+        /* Dashboard with QR layout */
+        .dashboard-with-qr {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .dashboard-with-qr .dashboard-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .dashboard-with-qr .qr-section {
+            flex: 0 0 350px;
+            margin-bottom: 0;
+        }
+
         .dashboard-card {
             background: white;
             border-radius: 10px;
@@ -451,6 +470,15 @@
                 gap: 1rem;
             }
 
+            .dashboard-with-qr {
+                flex-direction: column;
+            }
+
+            .dashboard-with-qr .qr-section {
+                flex: none;
+                order: -1; /* QR appears first on mobile */
+            }
+
             .connection-loader {
                 padding: 2rem 1.5rem;
             }
@@ -509,61 +537,63 @@
                     <p class="content-subtitle">Monitor your WhatsApp Bulk Sender application</p>
                 </div>
 
-                <div class="dashboard-grid">
-                    <div class="dashboard-card">
-                        <div class="card-header">
-                            <div class="card-icon">📱</div>
-                            <div class="card-title">Connection Status</div>
+                <div class="dashboard-content" id="dashboardContent">
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">📱</div>
+                                <div class="card-title">Connection Status</div>
+                            </div>
+                            <div class="card-content">
+                                <p id="connection-status">Not Connected</p>
+                                <button class="btn btn-primary" onclick="connectWhatsApp()">Connect</button>
+                            </div>
                         </div>
-                        <div class="card-content">
-                            <p id="connection-status">Not Connected</p>
-                            <button class="btn btn-primary" onclick="connectWhatsApp()">Connect</button>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">📤</div>
+                                <div class="card-title">Messages Sent</div>
+                            </div>
+                            <div class="card-content">
+                                <p><strong id="messages-sent">0</strong> messages sent today</p>
+                                <p>Last sent: <span id="last-message-time">Never</span></p>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">👥</div>
+                                <div class="card-title">Contact List</div>
+                            </div>
+                            <div class="card-content">
+                                <p><strong id="contacts-count">0</strong> contacts loaded</p>
+                                <p>Active contacts: <span id="active-contacts">0</span></p>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">⚡</div>
+                                <div class="card-title">Server Status</div>
+                            </div>
+                            <div class="card-content">
+                                <p>Server running on port <strong>3000</strong></p>
+                                <p>Uptime: <span id="server-uptime">--</span></p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="dashboard-card">
-                        <div class="card-header">
-                            <div class="card-icon">📤</div>
-                            <div class="card-title">Messages Sent</div>
+                    <!-- QR Code Section -->
+                    <div class="qr-section" id="qr-section" style="display: none;">
+                        <h3>📱 QR Code for WhatsApp Connection</h3>
+                        <div class="qr-placeholder" id="qr-placeholder">
+                            ⏳
                         </div>
-                        <div class="card-content">
-                            <p><strong id="messages-sent">0</strong> messages sent today</p>
-                            <p>Last sent: <span id="last-message-time">Never</span></p>
-                        </div>
+                        <p>After Scanning Wait for 30 seconds</p>
+                        <p><strong id="qr-timer">Waiting for QR code...</strong></p>
+                        <button class="btn btn-secondary" onclick="refreshQR()" style="margin-top: 1rem;">🔄 Refresh QR Code</button>
                     </div>
-
-                    <div class="dashboard-card">
-                        <div class="card-header">
-                            <div class="card-icon">👥</div>
-                            <div class="card-title">Contact List</div>
-                        </div>
-                        <div class="card-content">
-                            <p><strong id="contacts-count">0</strong> contacts loaded</p>
-                            <p>Active contacts: <span id="active-contacts">0</span></p>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-card">
-                        <div class="card-header">
-                            <div class="card-icon">⚡</div>
-                            <div class="card-title">Server Status</div>
-                        </div>
-                        <div class="card-content">
-                            <p>Server running on port <strong>3000</strong></p>
-                            <p>Uptime: <span id="server-uptime">--</span></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- QR Code Section -->
-                <div class="qr-section" id="qr-section" style="display: none;">
-                    <h3>📱 QR Code for WhatsApp Connection</h3>
-                    <div class="qr-placeholder" id="qr-placeholder">
-                        ⏳
-                    </div>
-                    <p>Scan this QR code with your WhatsApp mobile app</p>
-                    <p><strong id="qr-timer">Waiting for QR code...</strong></p>
-                    <button class="btn btn-secondary" onclick="refreshQR()" style="margin-top: 1rem;">🔄 Refresh QR Code</button>
                 </div>
             </section>
 
@@ -594,7 +624,10 @@
                             </div>
 
                             <div id="upload-status" style="margin-top: 1rem;">
-                                <p><strong>Contacts Loaded:</strong> <span id="contacts-loaded">0</span></p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <p style="margin: 0;"><strong>Contacts Loaded:</strong> <span id="contacts-loaded">0</span></p>
+                                    <button class="btn btn-danger btn-sm" onclick="confirmDeleteAllContacts()" style="font-size: 0.8rem;">🗑️ Delete All</button>
+                                </div>
                                 <div id="contact-list-display" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 1rem; margin-top: 0.5rem; border-radius: 5px; display: none;">
                                     <!-- Contact list will be displayed here -->
                                 </div>
@@ -625,9 +658,8 @@
                             </div>
 
                             <div style="display: flex; gap: 1rem;">
-                                <button class="btn btn-primary" onclick="sendMessages()">📤 Send Bulk Messages</button>
-                                <button class="btn btn-secondary" onclick="stopSending()">⏹️ Stop Sending</button>
-                                <button class="btn btn-secondary" onclick="previewMessages()">👁️ Preview</button>
+                                <button class="btn btn-primary" id="sendBulkBtn" onclick="sendMessages()">📤 Send Bulk Messages</button>
+                                <button class="btn btn-secondary" id="stopContinueBtn" onclick="stopOrContinueSending()" style="display: none;">⏹️ Stop Sending</button>
                             </div>
 
                             <!-- Progress Section -->
@@ -746,6 +778,40 @@
         </div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 10000;">
+        <div id="connectionToast1" class="toast" role="alert">
+            <div class="toast-body">
+                Your WhatsApp is already connected
+            </div>
+        </div>
+        <div id="connectionToast2" class="toast" role="alert">
+            <div class="toast-body">
+                To disconnect, please logout
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete All Contacts Modal -->
+    <div class="modal fade" id="deleteAllModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🗑️ Delete All Contacts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete all contacts?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteAllContacts()">Yes, Delete All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <!-- <footer class="footer">
         <div>© 2024 WhatsApp Bulk Sender Dashboard. All rights reserved.</div>
@@ -760,8 +826,58 @@
     <script>
         // Global variables
         let socket;
+        let sendingPaused = false;
+        let lastSentCount = 0;
 
         // ============ GLOBAL FUNCTIONS (accessible from onclick handlers) ============
+
+        // Show connected toasts
+        function showConnectedToasts() {
+            const toast1 = new bootstrap.Toast(document.getElementById('connectionToast1'));
+            const toast2 = new bootstrap.Toast(document.getElementById('connectionToast2'));
+
+            toast1.show();
+
+            setTimeout(() => {
+                toast2.show();
+            }, 1000);
+        }
+
+        // Confirm delete all contacts
+        function confirmDeleteAllContacts() {
+            const modal = new bootstrap.Modal(document.getElementById('deleteAllModal'));
+            modal.show();
+        }
+
+        // Delete all contacts
+        async function deleteAllContacts() {
+            try {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteAllModal'));
+                modal.hide();
+
+                // Clear all contacts on server
+                const response = await fetch('/upload-contacts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ contacts: [] })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatusMessage('All contacts deleted successfully!', 'success');
+                    // UI will be updated via socket event
+                } else {
+                    showStatusMessage('Error deleting contacts.', 'error');
+                }
+            } catch (error) {
+                console.error('Delete all contacts error:', error);
+                showStatusMessage('Error deleting contacts: ' + error.message, 'error');
+            }
+        }
 
         // WhatsApp Connection
         async function connectWhatsApp() {
@@ -783,6 +899,12 @@
                     statusText.textContent = 'Connected';
                     statusIndicator.classList.add('connected');
                     connectionStatus.textContent = 'Connected to WhatsApp';
+                    // Update button to show connected state
+                    const connectBtn = document.querySelector('.btn-primary[onclick="connectWhatsApp()"]');
+                    if (connectBtn) {
+                        connectBtn.textContent = 'WhatsApp Connected';
+                        connectBtn.onclick = showConnectedToasts;
+                    }
                     showStatusMessage('Already connected to WhatsApp!', 'success');
                     return;
                 }
@@ -1173,19 +1295,48 @@
             }
         }
 
-        // Stop Sending
-        function stopSending() {
-            try {
-                if (socket) {
-                    socket.emit('stopSending');
-                    showStatusMessage('Stop signal sent to server.', 'info');
-                    document.getElementById('progress-section').style.display = 'none';
-                } else {
-                    showStatusMessage('Socket connection not available.', 'error');
+        // Stop or Continue Sending
+        function stopOrContinueSending() {
+            const stopContinueBtn = document.getElementById('stopContinueBtn');
+            const sendBtn = document.getElementById('sendBulkBtn');
+
+            if (sendingPaused) {
+                // Continue sending
+                stopContinueBtn.textContent = '⏹️ Stop Sending';
+                sendBtn.textContent = '📤 Bulk message sending in progress...';
+                sendBtn.disabled = true;
+                sendingPaused = false;
+
+                // Resume sending
+                const messageText = document.getElementById('message-text').value;
+                const delay = parseInt(document.getElementById('delay-time').value) || 30;
+                const hasSpintax = /\{[^}]+\}/.test(messageText);
+
+                socket.emit('startSending', {
+                    message: messageText,
+                    delay: delay,
+                    useSpintax: hasSpintax,
+                    resumeFrom: lastSentCount
+                });
+
+                showStatusMessage('Resumed sending messages', 'info');
+            } else {
+                // Stop sending
+                try {
+                    if (socket) {
+                        socket.emit('stopSending');
+                        sendingPaused = true;
+                        stopContinueBtn.textContent = '▶️ Continue Bulk Messages';
+                        sendBtn.textContent = '📤 Send Bulk Messages';
+                        sendBtn.disabled = false;
+                        showStatusMessage('Sending paused. Click continue to resume.', 'info');
+                    } else {
+                        showStatusMessage('Socket connection not available.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Stop sending error:', error);
+                    showStatusMessage('Error stopping send process: ' + error.message, 'error');
                 }
-            } catch (error) {
-                console.error('Stop sending error:', error);
-                showStatusMessage('Error stopping send process: ' + error.message, 'error');
             }
         }
 
@@ -1222,12 +1373,22 @@
                     showStatusMessage(`Starting bulk message sending to ${statusData.progress.total} contacts...`, 'info');
                 }
 
+                // Update UI for sending in progress
+                const sendBtn = document.getElementById('sendBulkBtn');
+                const stopContinueBtn = document.getElementById('stopContinueBtn');
+
+                sendBtn.textContent = '📤 Bulk message sending in progress...';
+                sendBtn.disabled = true;
+                stopContinueBtn.style.display = 'inline-block';
+                stopContinueBtn.textContent = '⏹️ Stop Sending';
+                sendingPaused = false;
+
                 // Show progress section
                 document.getElementById('sending-progress-section').style.display = 'block';
-                document.getElementById('sent-count').textContent = '0';
+                document.getElementById('sent-count').textContent = lastSentCount;
                 document.getElementById('total-count').textContent = statusData.progress.total;
                 document.getElementById('failed-count').textContent = '0';
-                document.getElementById('remaining-count').textContent = statusData.progress.total;
+                document.getElementById('remaining-count').textContent = statusData.progress.total - lastSentCount;
                 document.getElementById('current-sending-status').textContent = 'Initializing...';
                 document.getElementById('current-contact-info').textContent = '-';
                 document.getElementById('message-logs').innerHTML = '<p style="color: #666; text-align: center;">Sending started...</p>';
@@ -1237,7 +1398,8 @@
                 socket.emit('startSending', {
                     message: messageText,
                     delay: delay,
-                    useSpintax: hasSpintax
+                    useSpintax: hasSpintax,
+                    resumeFrom: lastSentCount
                 });
 
                 document.getElementById('last-message-time').textContent = new Date().toLocaleTimeString();
@@ -1248,32 +1410,6 @@
             }
         }
 
-        // Preview Messages
-        async function previewMessages() {
-            const messageText = document.getElementById('message-text').value;
-            const contactsLoaded = parseInt(document.getElementById('contacts-loaded').textContent);
-
-            if (!messageText.trim()) {
-                showStatusMessage('Please enter a message for preview.', 'error');
-                return;
-            }
-
-            if (contactsLoaded === 0) {
-                showStatusMessage('Please upload contacts first for preview.', 'error');
-                return;
-            }
-
-            try {
-                const statusResponse = await fetch('/status');
-                const statusData = await statusResponse.json();
-
-                const preview = `"${messageText}" will be sent to ${statusData.progress.total} contacts`;
-                showStatusMessage(preview, 'info');
-            } catch (error) {
-                const preview = `"${messageText}" will be sent to ${contactsLoaded} contacts`;
-                showStatusMessage(preview, 'info');
-            }
-        }
 
         // ============ SUPPORTING FUNCTIONS ============
 
@@ -1282,6 +1418,7 @@
             const overlay = document.getElementById('connectionOverlay');
             const titleEl = document.getElementById('connectionTitle');
             const messageEl = document.getElementById('connectionMessage');
+            const stepIndicator = document.querySelector('.step-indicator');
             const step1 = document.getElementById('step1');
             const step2 = document.getElementById('step2');
             const spinner = document.getElementById('connectionSpinner');
@@ -1289,11 +1426,17 @@
             titleEl.textContent = title;
             messageEl.textContent = message;
 
-            // Update steps
-            step1.classList.toggle('active', step === 1);
-            step1.classList.toggle('completed', step > 1);
-            step2.classList.toggle('active', step === 2);
-            step2.classList.toggle('completed', step > 2);
+            // Show/hide step indicator
+            if (step === 0) {
+                stepIndicator.style.display = 'none';
+            } else {
+                stepIndicator.style.display = 'flex';
+                // Update steps
+                step1.classList.toggle('active', step === 1);
+                step1.classList.toggle('completed', step > 1);
+                step2.classList.toggle('active', step === 2);
+                step2.classList.toggle('completed', step > 2);
+            }
 
             // Show spinner, hide success icon
             spinner.style.display = 'block';
@@ -1479,14 +1622,48 @@
 
         // Status Messages
         function showStatusMessage(message, type) {
-            const statusElement = document.getElementById('send-status');
-            statusElement.textContent = message;
-            statusElement.className = `status-message status-${type}`;
-            statusElement.style.display = 'block';
+            // Create a toast notification instead of using the status div
+            const toastContainer = document.querySelector('.toast-container');
+            const toastId = 'status-toast-' + Date.now();
 
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 5000);
+            const toastDiv = document.createElement('div');
+            toastDiv.id = toastId;
+            toastDiv.className = `toast`;
+            toastDiv.setAttribute('role', 'alert');
+            toastDiv.innerHTML = `
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+
+            toastContainer.appendChild(toastDiv);
+
+            const toast = new bootstrap.Toast(toastDiv, {
+                autohide: true,
+                delay: 5000
+            });
+
+            // Set color based on type
+            if (type === 'success') {
+                toastDiv.querySelector('.toast-body').style.backgroundColor = '#d4edda';
+                toastDiv.querySelector('.toast-body').style.color = '#155724';
+                toastDiv.querySelector('.toast-body').style.borderLeft = '4px solid #28a745';
+            } else if (type === 'error') {
+                toastDiv.querySelector('.toast-body').style.backgroundColor = '#f8d7da';
+                toastDiv.querySelector('.toast-body').style.color = '#721c24';
+                toastDiv.querySelector('.toast-body').style.borderLeft = '4px solid #dc3545';
+            } else if (type === 'info') {
+                toastDiv.querySelector('.toast-body').style.backgroundColor = '#d1ecf1';
+                toastDiv.querySelector('.toast-body').style.color = '#0c5460';
+                toastDiv.querySelector('.toast-body').style.borderLeft = '4px solid #17a2b8';
+            }
+
+            toast.show();
+
+            // Remove toast from DOM after hiding
+            toastDiv.addEventListener('hidden.bs.toast', () => {
+                toastDiv.remove();
+            });
         }
 
         // Load contacts from server
@@ -1522,14 +1699,30 @@
                 const statusIndicator = document.getElementById('status-indicator');
                 const statusText = document.getElementById('status-text');
 
+                const connectBtn = document.querySelector('.btn-primary[onclick="connectWhatsApp()"]') || document.querySelector('.btn-primary');
+
                 if (data.connected) {
                     statusText.textContent = 'Connected';
                     statusIndicator.classList.add('connected');
                     document.getElementById('connection-status').textContent = 'Connected to WhatsApp';
+                    // Hide QR section and reset layout
+                    const qrSection = document.getElementById('qr-section');
+                    qrSection.style.display = 'none';
+                    document.getElementById('dashboardContent').classList.remove('dashboard-with-qr');
+                    // Update button to show connected state
+                    if (connectBtn) {
+                        connectBtn.textContent = 'WhatsApp Connected';
+                        connectBtn.onclick = showConnectedToasts;
+                    }
                 } else {
                     statusText.textContent = 'Disconnected';
                     statusIndicator.classList.remove('connected');
                     document.getElementById('connection-status').textContent = 'Not Connected';
+                    // Reset button to connect state
+                    if (connectBtn) {
+                        connectBtn.textContent = 'Connect';
+                        connectBtn.onclick = connectWhatsApp;
+                    }
                 }
 
                 // Update messages sent count
@@ -1644,13 +1837,10 @@
                 // Update timer
                 document.getElementById('qr-timer').textContent = 'Scan this QR code now (expires in ~60 seconds)';
 
-                // Change button to Disconnect
-                if (connectBtn) {
-                    connectBtn.textContent = 'Disconnect WhatsApp';
-                    connectBtn.onclick = function() {
-                        logout();
-                    };
-                }
+                // Switch to QR layout
+                document.getElementById('dashboardContent').classList.add('dashboard-with-qr');
+
+                // Keep button as Connect (disconnect is handled by logout)
 
                 showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
             });
@@ -1658,12 +1848,17 @@
             socket.on('authenticated', () => {
                 console.log('QR scanned, client authenticated');
 
-                // Show connection overlay with step 1
+                // Update overlay to connecting state
                 showConnectionOverlay('Connecting to the server', 'Please wait while we establish connection...', 1);
             });
 
             socket.on('ready', () => {
                 console.log('WhatsApp Connected!');
+
+                // Hide QR section and reset layout
+                const qrSection = document.getElementById('qr-section');
+                qrSection.style.display = 'none';
+                document.getElementById('dashboardContent').classList.remove('dashboard-with-qr');
 
                 // Update overlay to show success
                 showConnectionSuccess();
@@ -1676,15 +1871,26 @@
 
             // Socket event handlers for progress tracking
             socket.on('sendProgress', (data) => {
+                lastSentCount = data.sent;
                 document.getElementById('sent-count').textContent = data.sent;
                 document.getElementById('total-count').textContent = data.total;
+                document.getElementById('remaining-count').textContent = data.total - data.sent;
                 document.getElementById('current-contact-info').textContent = data.currentName || data.currentNumber || '-';
                 document.getElementById('current-sending-status').textContent = data.status || 'Sending...';
-                
+
                 const percentage = data.total > 0 ? (data.sent / data.total) * 100 : 0;
                 document.getElementById('progress-bar').style.width = percentage + '%';
-                
+
                 if (data.sent === data.total) {
+                    // Reset UI when completed
+                    const sendBtn = document.getElementById('sendBulkBtn');
+                    const stopContinueBtn = document.getElementById('stopContinueBtn');
+                    sendBtn.textContent = '📤 Send Bulk Messages';
+                    sendBtn.disabled = false;
+                    stopContinueBtn.style.display = 'none';
+                    sendingPaused = false;
+                    lastSentCount = 0;
+
                     showStatusMessage('All messages sent successfully!', 'success');
                     document.getElementById('sending-progress-section').style.display = 'block';
                 }
@@ -1697,6 +1903,11 @@
             socket.on('contactsUpdated', (data) => {
                 // Update contacts display when contacts are updated
                 loadContacts();
+                // Also update send-message section contacts display
+                const contactCount = (data.contacts || []).length;
+                displayContacts(data.contacts || []);
+                updateDashboardStats(contactCount);
+                document.getElementById('contacts-loaded').textContent = contactCount;
             });
 
             // Load contacts from server and update status

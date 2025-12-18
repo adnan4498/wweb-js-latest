@@ -117,33 +117,38 @@ app.get("/status", (req, res) => {
 
 // Upload contacts endpoint
 app.post("/upload-contacts", express.json(), (req, res) => {
-  try {
-    const { contacts: newContacts } = req.body;
+    try {
+        const { contacts: newContacts } = req.body;
 
-    if (!Array.isArray(newContacts)) {
-      return res.json({ success: false, error: "Invalid contacts data" });
+        if (!Array.isArray(newContacts)) {
+            return res.json({ success: false, error: "Invalid contacts data" });
+        }
+
+        // If sending empty array, clear all contacts
+        if (newContacts.length === 0) {
+            contacts = [];
+        } else {
+            // Filter out duplicates based on phone number
+            const uniqueNewContacts = newContacts.filter(newContact =>
+              !contacts.some(existingContact => existingContact.number === newContact.number)
+            );
+
+            // Add unique contacts to existing contacts
+            contacts = [...contacts, ...uniqueNewContacts];
+        }
+
+        // Emit update to all clients
+        io.emit("contactsUpdated", { contacts });
+
+        res.json({
+            success: true,
+            message: newContacts.length === 0 ? 'Contacts cleared successfully' : `Added ${newContacts.length} unique contacts successfully`,
+            phoneNumbers: newContacts.map((c) => c.number),
+        });
+    } catch (error) {
+        console.error("Upload contacts error:", error);
+        res.json({ success: false, error: error.message });
     }
-
-    // Filter out duplicates based on phone number
-    const uniqueNewContacts = newContacts.filter(newContact =>
-      !contacts.some(existingContact => existingContact.number === newContact.number)
-    );
-
-    // Add unique contacts to existing contacts
-    contacts = [...contacts, ...uniqueNewContacts];
-
-    // Emit update to all clients
-    io.emit("contactsUpdated", { contacts });
-
-    res.json({
-      success: true,
-      message: `Added ${uniqueNewContacts.length} unique contacts successfully`,
-      phoneNumbers: uniqueNewContacts.map((c) => c.number),
-    });
-  } catch (error) {
-    console.error("Upload contacts error:", error);
-    res.json({ success: false, error: error.message });
-  }
 });
 
 // Get contacts endpoint
@@ -153,20 +158,20 @@ app.get("/contacts", (req, res) => {
 
 // Send bulk messages endpoint
 app.post("/send-bulk", express.json(), (req, res) => {
-  try {
-    const { message, delay, useSpintax } = req.body;
+    try {
+        const { message, delay, useSpintax, resumeFrom } = req.body;
 
-    if (sendingInProgress) {
-      return res.json({ success: false, error: "Sending already in progress" });
-    }
+        if (sendingInProgress) {
+            return res.json({ success: false, error: "Sending already in progress" });
+        }
 
-    if (contacts.length === 0) {
-      return res.json({ success: false, error: "No contacts loaded" });
-    }
+        if (contacts.length === 0) {
+            return res.json({ success: false, error: "No contacts loaded" });
+        }
 
-    // Start sending process
-    sendingInProgress = true;
-    let sentCount = 0;
+        // Start sending process
+        sendingInProgress = true;
+        let sentCount = resumeFrom || 0;
 
     const sendNextMessage = async () => {
       if (!sendingInProgress || sentCount >= contacts.length) {
@@ -291,13 +296,13 @@ io.on("connection", (socket) => {
 
   // Handle start sending
   socket.on("startSending", (data) => {
-    if (sendingInProgress) return;
+      if (sendingInProgress) return;
 
-    sendingInProgress = true;
-    const baseMessage = data.message;
-    const delay = data.delay * 1000; // Convert to milliseconds
-    const useSpintax = data.useSpintax || false;
-    let sentCount = 0;
+      sendingInProgress = true;
+      const baseMessage = data.message;
+      const delay = data.delay * 1000; // Convert to milliseconds
+      const useSpintax = data.useSpintax || false;
+      let sentCount = data.resumeFrom || 0;
 
     // Send messages with delay
     const sendNextMessage = async () => {
