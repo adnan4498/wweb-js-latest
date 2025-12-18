@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp Bulk Sender Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- QR Code Library -->  
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- XLSX Library -->
@@ -823,6 +825,8 @@
     </footer> -->
 
     <script src="/socket.io/socket.io.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Global variables
         let socket;
@@ -964,8 +968,6 @@
 
                     // Update timer
                     document.getElementById('qr-timer').textContent = 'Scan this QR code now (expires in ~60 seconds)';
-
-                    showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
                 } else {
                     // QR not ready yet
                     const qrPlaceholder = document.getElementById('qr-placeholder');
@@ -1841,8 +1843,6 @@
                 document.getElementById('dashboardContent').classList.add('dashboard-with-qr');
 
                 // Keep button as Connect (disconnect is handled by logout)
-
-                showStatusMessage('QR Code generated! Scan with your WhatsApp mobile app.', 'success');
             });
 
             socket.on('authenticated', () => {
@@ -1871,15 +1871,18 @@
 
             // Socket event handlers for progress tracking
             socket.on('sendProgress', (data) => {
-                lastSentCount = data.sent;
-                document.getElementById('sent-count').textContent = data.sent;
-                document.getElementById('total-count').textContent = data.total;
-                document.getElementById('remaining-count').textContent = data.total - data.sent;
-                document.getElementById('current-contact-info').textContent = data.currentName || data.currentNumber || '-';
-                document.getElementById('current-sending-status').textContent = data.status || 'Sending...';
+                // Only update UI if not paused
+                if (!sendingPaused) {
+                    lastSentCount = data.sent;
+                    document.getElementById('sent-count').textContent = data.sent;
+                    document.getElementById('total-count').textContent = data.total;
+                    document.getElementById('remaining-count').textContent = data.total - data.sent;
+                    document.getElementById('current-contact-info').textContent = data.currentName || data.currentNumber || '-';
+                    document.getElementById('current-sending-status').textContent = data.status || 'Sending...';
 
-                const percentage = data.total > 0 ? (data.sent / data.total) * 100 : 0;
-                document.getElementById('progress-bar').style.width = percentage + '%';
+                    const percentage = data.total > 0 ? (data.sent / data.total) * 100 : 0;
+                    document.getElementById('progress-bar').style.width = percentage + '%';
+                }
 
                 if (data.sent === data.total) {
                     // Reset UI when completed
